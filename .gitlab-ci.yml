@@ -1,0 +1,31 @@
+image: node:10.19.0
+
+cache:
+  paths:
+    - node_modules/
+
+stages:
+  - tests
+  - coverage
+
+services:
+  - name: trufflesuite/ganache-cli
+    alias: ganache
+    entrypoint: ["node", "/app/ganache-core.docker.cli.js"]
+
+before_script:
+  - yarn add global truffle
+  - yarn
+
+contracts:
+  stage: tests
+  script:
+    - yarn migrate --network ganache
+    - yarn test --network ganache
+
+
+contracts-coverage:
+  stage: coverage
+  script:
+    - truffle run coverage --network ganache
+  allow_failure: true

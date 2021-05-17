@@ -1,7 +1,9 @@
 .idea/
 node_modules/
-types/truffle-contracts/*
 migrations/
 build/
+coverage/
+types/truffle-contracts/
 */**/*.js
+coverage.json
 .secret
