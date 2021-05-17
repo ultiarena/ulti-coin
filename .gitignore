@@ -4,3 +4,4 @@ types/truffle-contracts/*
 migrations/
 build/
 */**/*.js
+.secret
