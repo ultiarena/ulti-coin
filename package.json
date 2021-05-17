@@ -24,6 +24,7 @@
     "@types/chai": "^4.2.11",
     "@types/mocha": "^7.0.2",
     "@types/web3": "^1.2.2",
+    "solidity-coverage": "^0.7.16",
     "typechain": "^5.0.0"
   }
 }
