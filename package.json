@@ -9,7 +9,8 @@
     "postinstall": "truffle compile && yarn generate-types",
     "migrate": "tsc -p ./tsconfig.migrate.json --outDir ./migrations && truffle migrate",
     "typecheck": "tsc --noEmit",
-    "test": "truffle test"
+    "test": "truffle test",
+    "coverage": "truffle run coverage"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.1.0",
