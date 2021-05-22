@@ -1,31 +1,45 @@
 {
-  "name": "ulti-token",
+  "name": "ulti-contracts",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "homepage": "https://ultiarena.com",
   "main": "index.js",
-  "license": "MIT",
+  "license": "GPL-3",
   "scripts": {
-    "generate-types": "typechain --target=truffle-v5 'build/contracts/*.json'",
-    "postinstall": "truffle compile && yarn generate-types",
-    "migrate": "tsc -p ./tsconfig.migrate.json --outDir ./migrations && truffle migrate",
-    "typecheck": "tsc --noEmit",
-    "test": "truffle test",
-    "coverage": "truffle run coverage"
+    "compile": "yarn hardhat compile",
+    "clean": "yarn hardhat clean",
+    "test": "hardhat test",
+    "typecheck": "yarn compile && yarn test && yarn tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=10"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.1.0",
-    "truffle": "^5.1.22",
-    "typescript": "4.1.5"
+    "@openzeppelin/contracts": "^4.1.0"
   },
   "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/test-helpers": "^0.5.11",
-    "@truffle/hdwallet-provider": "^1.4.0",
-    "@typechain/truffle-v5": "^5.0.0",
-    "@types/bn.js": "^4.11.6",
-    "@types/chai": "^4.2.11",
-    "@types/mocha": "^7.0.2",
-    "@types/web3": "^1.2.2",
-    "solidity-coverage": "^0.7.16",
-    "typechain": "^5.0.0"
+    "@typechain/ethers-v5": "^7.0.0",
+    "@typechain/hardhat": "^2.0.1",
+    "@types/chai": "^4.2.18",
+    "@types/mocha": "^8.2.2",
+    "@types/node": "^15.6.0",
+    "chai": "^4.3.4",
+    "decimal.js": "^10.2.1",
+    "ethereum-waffle": "^3.3.0",
+    "ethers": "^5.2.0",
+    "hardhat": "^2.3.0",
+    "hardhat-typechain": "^0.3.5",
+    "mocha": "^8.4.0",
+    "prettier": "^2.3.0",
+    "prettier-plugin-solidity": "^1.0.0-beta.10",
+    "solhint": "^3.3.5",
+    "solhint-plugin-prettier": "^0.0.5",
+    "ts-generator": "^0.1.1",
+    "ts-node": "^9.1.1",
+    "typechain": "^5.0.0",
+    "typescript": "4.1.5"
   }
 }
