@@ -1,10 +1,11 @@
-image: node:10.19.0
+image: node:16.1.0
 
 cache:
   paths:
     - node_modules/
 
 stages:
+  - lint
   - tests
   - coverage
 
@@ -14,18 +15,21 @@ services:
     entrypoint: ["node", "/app/ganache-core.docker.cli.js"]
 
 before_script:
-  - yarn add global truffle
   - yarn
+  - yarn compile
 
-contracts:
+contracts-lint:
+  stage: lint
+  script:
+    - yarn lint
+
+contracts-tests:
   stage: tests
   script:
-    - yarn migrate --network ganache
-    - yarn test --network ganache
-
+    - yarn test --network hardhat
 
 contracts-coverage:
   stage: coverage
   script:
-    - truffle run coverage --network ganache
+    - yarn coverage --network hardhat
   allow_failure: true

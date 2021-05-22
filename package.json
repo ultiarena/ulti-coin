@@ -6,13 +6,14 @@
   "main": "index.js",
   "license": "GPLv3",
   "scripts": {
-    "compile": "yarn hardhat compile",
-    "clean": "yarn hardhat clean",
+    "compile": "hardhat compile",
+    "clean": "hardhat clean",
+    "coverage": "hardhat coverage",
     "test": "hardhat test",
-    "typecheck": "yarn format && yarn lint && yarn compile && yarn test && yarn tsc --noEmit",
     "verify-testnet": "hardhat verify --network bsc_testnet",
     "format": "prettier --write \"**/*.ts\" \"contracts/**/*.sol\"",
-    "lint": "solhint \"contracts/**/*.sol\""
+    "lint": "solhint \"contracts/**/*.sol\"",
+    "typecheck": "yarn compile && yarn test && yarn tsc --noEmit"
   },
   "engines": {
     "node": ">=10"
@@ -41,6 +42,7 @@
     "prettier-plugin-solidity": "^1.0.0-beta.10",
     "solhint": "^3.3.5",
     "solhint-plugin-prettier": "^0.0.5",
+    "solidity-coverage": "^0.7.16",
     "ts-generator": "^0.1.1",
     "ts-node": "^9.1.1",
     "typechain": "^5.0.0",
