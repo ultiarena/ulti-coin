@@ -1,23 +1,23 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiToken__factory, UltiToken } from '../typechain'
+import { UltiCoin__factory, UltiCoin } from '../typechain'
 import { solidity } from 'ethereum-waffle'
 import { formatTokenAmount } from './utils'
 
 use(solidity)
 
-describe('UltiToken', () => {
-  const name = 'UltiToken'
+describe('UltiCoin', () => {
+  const name = 'UltiCoin'
   const symbol = 'ULTI'
   const decimals = 18
 
   const initialSupply = 40 * 1e9 * 1e18
   const cap = 150 * 1e9 * 1e18
 
-  let token: UltiToken
+  let token: UltiCoin
 
   beforeEach(async () => {
-    const tokenFactory = (await ethers.getContractFactory('UltiToken')) as UltiToken__factory
+    const tokenFactory = (await ethers.getContractFactory('UltiCoin')) as UltiCoin__factory
     token = await tokenFactory.deploy()
   })
 
