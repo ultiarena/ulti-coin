@@ -1,6 +1,7 @@
+import '@nomiclabs/hardhat-etherscan'
 import '@nomiclabs/hardhat-waffle'
 import '@typechain/hardhat'
-const { mnemonic } = require('./.secrets.json');
+const { mnemonic, bscApiKey } = require('./.secrets.json');
 
 module.exports = {
   networks: {
@@ -14,6 +15,10 @@ module.exports = {
       chainId: 56,
       accounts: {mnemonic: mnemonic}
     }
+  },
+  etherscan: {
+    // Your API key for Binance Smart Chain
+    apiKey: bscApiKey,
   },
   solidity: {
     version: '0.8.0',
