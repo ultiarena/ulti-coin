@@ -10,7 +10,8 @@
     "clean": "yarn hardhat clean",
     "test": "hardhat test",
     "typecheck": "yarn compile && yarn test && yarn tsc --noEmit",
-    "verify-testnet": "hardhat verify --network bsc_testnet" 
+    "verify-testnet": "hardhat verify --network bsc_testnet",
+    "format": "prettier --write \"**/*.ts\""
   },
   "engines": {
     "node": ">=10"

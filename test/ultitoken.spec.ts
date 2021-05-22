@@ -7,22 +7,21 @@ import { formatTokenAmount } from './utils'
 use(solidity)
 
 describe('UltiToken', () => {
-  const name = 'UltiToken';
-  const symbol = 'ULTI';
-  const decimals = 18;
+  const name = 'UltiToken'
+  const symbol = 'ULTI'
+  const decimals = 18
 
-  const initialSupply = 40 * 1e9 * 1e18;
-  const cap = 150 * 1e9 * 1e18;
+  const initialSupply = 40 * 1e9 * 1e18
+  const cap = 150 * 1e9 * 1e18
 
-  let token: UltiToken;
+  let token: UltiToken
 
   beforeEach(async () => {
-    const tokenFactory = (await ethers.getContractFactory('UltiToken') as UltiToken__factory)
+    const tokenFactory = (await ethers.getContractFactory('UltiToken')) as UltiToken__factory
     token = await tokenFactory.deploy()
   })
 
   describe('constructor', async () => {
-
     it('should set name', async () => {
       expect(await token.name()).to.equal(name)
     })

@@ -1,20 +1,20 @@
 import '@nomiclabs/hardhat-etherscan'
 import '@nomiclabs/hardhat-waffle'
 import '@typechain/hardhat'
-const { mnemonic, bscApiKey } = require('./.secrets.json');
+const { mnemonic, bscApiKey } = require('./.secrets.json')
 
 module.exports = {
   networks: {
     bsc_testnet: {
       url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
       chainId: 97,
-      accounts: {mnemonic: mnemonic}
+      accounts: { mnemonic: mnemonic },
     },
     bsc: {
-      url: "https://bsc-dataseed.binance.org/",
+      url: 'https://bsc-dataseed.binance.org/',
       chainId: 56,
-      accounts: {mnemonic: mnemonic}
-    }
+      accounts: { mnemonic: mnemonic },
+    },
   },
   etherscan: {
     // Your API key for Binance Smart Chain
@@ -36,9 +36,9 @@ module.exports = {
     },
   },
   paths: {
-    sources: "./contracts",
-    tests: "./test",
-    cache: "./cache",
-    artifacts: "./artifacts"
+    sources: './contracts',
+    tests: './test',
+    cache: './cache',
+    artifacts: './artifacts',
   },
 }
