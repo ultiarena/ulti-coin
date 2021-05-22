@@ -10,16 +10,22 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract UltiToken is ERC20, ERC20Capped, ERC20Burnable, Pausable, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant RELEASE_ROLE = keccak256("RELEASE_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    uint256 public constant INITIAL_SUPPLY = 40 * 1e9 * 1e18;
 
     constructor() ERC20("UltiToken", "ULTI") ERC20Capped(150 * 1e9 * 1e18) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MINTER_ROLE, msg.sender);
-        _setupRole(RELEASE_ROLE, msg.sender);
-        _pause(); // Transfer and burn of the tokens are paused until the release
+        _setupRole(PAUSER_ROLE, msg.sender);
+        ERC20._mint(msg.sender, INITIAL_SUPPLY);
     }
 
-    function release() onlyRole(RELEASE_ROLE) public whenPaused {
+    function pause() public onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(PAUSER_ROLE) {
         _unpause();
     }
 
