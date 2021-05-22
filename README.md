@@ -1,19 +1,15 @@
-# ULTI Token contracts
+# ULTI Coin contracts
 
-## Running
-```
-yarn # it will automatically run TypeChain types generation
+## Commands
+`yarn format`
 
-# yarn generate-types to manually regenerate them
+`yarn lint`
 
-# run tests
-truffle test
+`yarn test`
 
-# migrations are kinda tricky (look at known limitation section) - we need to transpile ts to js file (this is not a case for tests)
-yarn migrate
-```
+`yarn compile`
 
-## Known limitations
-```
-Migrations need to be transpiled to js before execution.
-```
+`yarn verify-testnet` - put your bscscan api key to `.secrets.json`
+
+tbd
+`yarn deploy`  - put your mnemonic to `.secrets.json`
