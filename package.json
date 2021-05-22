@@ -4,14 +4,15 @@
   "version": "0.1.0",
   "homepage": "https://ultiarena.com",
   "main": "index.js",
-  "license": "GPL-3",
+  "license": "GPLv3",
   "scripts": {
     "compile": "yarn hardhat compile",
     "clean": "yarn hardhat clean",
     "test": "hardhat test",
-    "typecheck": "yarn compile && yarn test && yarn tsc --noEmit",
+    "typecheck": "yarn format && yarn lint && yarn compile && yarn test && yarn tsc --noEmit",
     "verify-testnet": "hardhat verify --network bsc_testnet",
-    "format": "prettier --write \"**/*.ts\""
+    "format": "prettier --write \"**/*.ts\" \"contracts/**/*.sol\"",
+    "lint": "solhint \"contracts/**/*.sol\""
   },
   "engines": {
     "node": ">=10"
