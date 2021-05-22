@@ -1,15 +1,22 @@
 # ULTI Coin contracts
 
-## Commands
+## Usage
+
+Format files:
 `yarn format`
 
+Lint files:
 `yarn lint`
 
-`yarn test`
-
+Compile files:
 `yarn compile`
 
+Run tests:
+`yarn test`
+
+Verify contract to bsc testnet:
+`yarn deploy-testnet`  - put your mnemonic to `.secrets.json`
+
+Verify contract on bscscan:
 `yarn verify-testnet` - put your bscscan api key to `.secrets.json`
 
-tbd
-`yarn deploy`  - put your mnemonic to `.secrets.json`
