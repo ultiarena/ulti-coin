@@ -2,10 +2,10 @@ import { ethers } from 'hardhat'
 
 async function main() {
   // We get the contract to deploy
-  const factory = await ethers.getContractFactory('UltiToken')
+  const factory = await ethers.getContractFactory('UltiCoin')
   const token = await factory.deploy()
 
-  console.log('UltiToken deployed to:', token.address)
+  console.log('UltiCoin deployed to:', token.address)
 }
 
 main()

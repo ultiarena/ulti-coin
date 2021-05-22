@@ -10,6 +10,7 @@
     "clean": "hardhat clean",
     "coverage": "hardhat coverage",
     "test": "hardhat test",
+    "deploy-testnet": "hardhat run --network bsc_testnet scripts/deploy.ts",
     "verify-testnet": "hardhat verify --network bsc_testnet",
     "format": "prettier --write \"**/*.ts\" \"contracts/**/*.sol\"",
     "lint": "solhint \"contracts/**/*.sol\"",
