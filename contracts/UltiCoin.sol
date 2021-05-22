@@ -8,13 +8,13 @@ import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol';
 import '@openzeppelin/contracts/security/Pausable.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 
-contract UltiToken is ERC20, ERC20Capped, ERC20Burnable, Pausable, AccessControl {
+contract UltiCoin is ERC20, ERC20Capped, ERC20Burnable, Pausable, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
     uint256 public constant INITIAL_SUPPLY = 40 * 1e9 * 1e18;
 
-    constructor() ERC20('UltiToken', 'ULTI') ERC20Capped(150 * 1e9 * 1e18) {
+    constructor() ERC20('UltiCoin', 'ULTI') ERC20Capped(150 * 1e9 * 1e18) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(MINTER_ROLE, msg.sender);
         _setupRole(PAUSER_ROLE, msg.sender);
