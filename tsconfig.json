@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "lib": ["ES2018", "DOM"],
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "target": "es2018",
+    "module": "commonjs",
     "strict": true,
-    "target": "ES2018",
-    "sourceMap": true,
-    "esModuleInterop": true
-  }
+    "esModuleInterop": true,
+    "outDir": "dist",
+//    "typeRoots": ["./typechain", "./node_modules/@types"],
+//    "types": ["@nomiclabs/hardhat-ethers", "@nomiclabs/hardhat-waffle"]
+  },
+  "include": ["./scripts", "./test"],
+  "files": ["./hardhat.config.ts"]
 }
