@@ -7,7 +7,6 @@ types/truffle-contracts/
 */**/*.js
 coverage.json
 .secret
-.secrets.json
 artifacts/
 cache/
 crytic-export/

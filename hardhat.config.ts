@@ -1,6 +1,7 @@
 import '@nomiclabs/hardhat-etherscan'
 import '@nomiclabs/hardhat-waffle'
 import '@typechain/hardhat'
+import 'solidity-coverage'
 const { mnemonic, bscApiKey } = require('./.secrets.json')
 
 module.exports = {
