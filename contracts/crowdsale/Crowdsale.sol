@@ -128,7 +128,7 @@ contract Crowdsale is Context, ReentrancyGuard {
      * @param beneficiary Address performing the token purchase
      * @param weiAmount Value in wei involved in the purchase
      */
-    function _preValidatePurchase(address beneficiary, uint256 weiAmount) internal view {
+    function _preValidatePurchase(address beneficiary, uint256 weiAmount) internal view virtual {
         require(beneficiary != address(0), 'Crowdsale: beneficiary is the zero address');
         require(weiAmount != 0, 'Crowdsale: weiAmount is 0');
     }
@@ -159,7 +159,7 @@ contract Crowdsale is Context, ReentrancyGuard {
      * @param beneficiary Address receiving the tokens
      * @param tokenAmount Number of tokens to be purchased
      */
-    function _processPurchase(address beneficiary, uint256 tokenAmount) internal {
+    function _processPurchase(address beneficiary, uint256 tokenAmount) internal virtual {
         _deliverTokens(beneficiary, tokenAmount);
     }
 
