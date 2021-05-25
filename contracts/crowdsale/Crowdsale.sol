@@ -38,6 +38,15 @@ contract Crowdsale is Context, ReentrancyGuard {
     uint256 private _weiRaised;
 
     /**
+     * Event for token purchase logging
+     * @param purchaser who paid for the tokens
+     * @param beneficiary who got the tokens
+     * @param value weis paid for purchase
+     * @param amount amount of tokens purchased
+     */
+    event TokensPurchased(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+
+    /**
      * @param rate_ Number of token units a buyer gets per wei
      * @dev The rate is the conversion between wei and the smallest and indivisible
      * token unit. So, if you are using a rate of 1 with a ERC20Detailed token
@@ -188,13 +197,4 @@ contract Crowdsale is Context, ReentrancyGuard {
     function _forwardFunds() internal {
         _wallet.transfer(msg.value);
     }
-
-    /**
-     * Event for token purchase logging
-     * @param purchaser who paid for the tokens
-     * @param beneficiary who got the tokens
-     * @param value weis paid for purchase
-     * @param amount amount of tokens purchased
-     */
-    event TokensPurchased(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 }

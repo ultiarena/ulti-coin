@@ -31,8 +31,8 @@ contract WhitelistAccess is Context, AccessControl {
     /**
      * @dev Returns `true` if `account` is present on `whitelist`.
      */
-    function isWhitelisted(string whitelist, address account) public view returns (bool) {
-        return _isWhitelisted(keccak256(whitelist), account);
+    function isWhitelisted(string memory whitelist, address account) public view returns (bool) {
+        return _isWhitelisted(keccak256(abi.encodePacked(whitelist)), account);
     }
 
     /**
@@ -44,8 +44,8 @@ contract WhitelistAccess is Context, AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function addToWhitelist(string whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _addWhitelisted(keccak256(whitelist), account);
+    function addToWhitelist(string memory whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _addWhitelisted(keccak256(abi.encodePacked(whitelist)), account);
     }
 
     /**
@@ -57,8 +57,8 @@ contract WhitelistAccess is Context, AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function removeFromWhitelist(string whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _removeWhitelisted(keccak256(whitelist), account);
+    function removeFromWhitelist(string memory whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _removeWhitelisted(keccak256(abi.encodePacked(whitelist)), account);
     }
 
     /**
@@ -70,8 +70,11 @@ contract WhitelistAccess is Context, AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function bulkAddToWhitelist(string whitelist, address[] memory accounts) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        bytes32 _whitelist = keccak256(whitelist);
+    function bulkAddToWhitelist(string memory whitelist, address[] memory accounts)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        bytes32 _whitelist = keccak256(abi.encodePacked(whitelist));
         for (uint256 i = 0; i < accounts.length; i++) {
             _addWhitelisted(_whitelist, accounts[i]);
         }
@@ -80,7 +83,7 @@ contract WhitelistAccess is Context, AccessControl {
     /**
      * @dev Returns `true` if `account` is present on `whitelist`.
      */
-    function _isWhitelisted(bytes32 whitelist, address account) internal returns (bool) {
+    function _isWhitelisted(bytes32 whitelist, address account) internal view returns (bool) {
         return hasRole(whitelist, account);
     }
 
