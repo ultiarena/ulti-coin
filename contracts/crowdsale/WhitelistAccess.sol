@@ -6,43 +6,74 @@ import '@openzeppelin/contracts/utils/Context.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 
 contract WhitelistAccess is Context, AccessControl {
-    bytes32 public constant WHITELISTED_ROLE = keccak256('WHITELISTED_ROLE');
+    /**
+     * @dev Emitted when `account` is added to `whitelist`.
+     */
+    event WhitelistAdded(bytes32 indexed whitelist, address indexed account);
 
-    event WhitelistedAdded(address indexed account);
-    event WhitelistedRemoved(address indexed account);
+    /**
+     * @dev Emitted when `account` is removed from `whitelist`.
+     */
+    event WhitelistRemoved(bytes32 indexed whitelist, address indexed account);
 
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    modifier onlyWhitelisted() {
-        require(isWhitelisted(_msgSender()), 'WhitelistedRole: caller does not have the Whitelisted role');
+    /**
+     * @dev Modifier that checks that an account is present on `whitelist`.
+     */
+    modifier onlyWhitelisted(bytes32 whitelist) {
+        require(isWhitelisted(whitelist, _msgSender()), 'WhitelistAccess: caller is not whitelisted');
         _;
     }
 
-    function isWhitelisted(address account) public view returns (bool) {
-        return hasRole(WHITELISTED_ROLE, account);
+    /**
+     * @dev Returns `true` if `account` is present on `whitelist`.
+     */
+    function isWhitelisted(bytes32 whitelist, address account) public view returns (bool) {
+        return hasRole(whitelist, account);
     }
 
-    function addWhitelisted(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _addWhitelisted(account);
+    /**
+     * @dev Adds `account` to `whitelist`.
+     *
+     * If `account` had been removed, emits a {WhitelistAdded} event.
+     *
+     * Requirements:
+     *
+     * - the caller must have ``role``'s admin role.
+     */
+    function addWhitelisted(bytes32 whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _addWhitelisted(whitelist, account);
     }
 
-    function removeWhitelisted(address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _removeWhitelisted(account);
+    /**
+     * @dev Removes `account` from `whitelist`.
+     *
+     * If `account` had been removed, emits a {WhitelistRemoved} event.
+     *
+     * Requirements:
+     *
+     * - the caller must have ``role``'s admin role.
+     */
+    function removeWhitelisted(bytes32 whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _removeWhitelisted(whitelist, account);
     }
 
-    function renounceWhitelisted() public {
-        _removeWhitelisted(_msgSender());
+    /**
+     * @dev Adds `account` to `whitelist`.
+     */
+    function _addWhitelisted(bytes32 whitelist, address account) internal {
+        _setupRole(whitelist, account);
+        emit WhitelistAdded(whitelist, account);
     }
 
-    function _addWhitelisted(address account) internal {
-        _setupRole(WHITELISTED_ROLE, account);
-        emit WhitelistedAdded(account);
-    }
-
-    function _removeWhitelisted(address account) internal {
-        revokeRole(WHITELISTED_ROLE, account);
-        emit WhitelistedRemoved(account);
+    /**
+     * @dev Removes `account` from `whitelist`.
+     */
+    function _removeWhitelisted(bytes32 whitelist, address account) internal {
+        revokeRole(whitelist, account);
+        emit WhitelistRemoved(whitelist, account);
     }
 }
