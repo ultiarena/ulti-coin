@@ -24,28 +24,28 @@ contract WhitelistAccess is Context, AccessControl {
      * @dev Modifier that checks that an account is present on `whitelist`.
      */
     modifier onlyWhitelisted(bytes32 whitelist) {
-        require(isWhitelisted(whitelist, _msgSender()), 'WhitelistAccess: caller is not whitelisted');
+        require(_isWhitelisted(whitelist, _msgSender()), 'WhitelistAccess: caller is not whitelisted');
         _;
     }
 
     /**
      * @dev Returns `true` if `account` is present on `whitelist`.
      */
-    function isWhitelisted(bytes32 whitelist, address account) public view returns (bool) {
-        return hasRole(whitelist, account);
+    function isWhitelisted(string whitelist, address account) public view returns (bool) {
+        return _isWhitelisted(keccak256(whitelist), account);
     }
 
     /**
      * @dev Adds `account` to `whitelist`.
      *
-     * If `account` had been removed, emits a {WhitelistAdded} event.
+     * If `account` had been added, emits a {WhitelistAdded} event.
      *
      * Requirements:
      *
      * - the caller must have ``role``'s admin role.
      */
-    function addWhitelisted(bytes32 whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _addWhitelisted(whitelist, account);
+    function addToWhitelist(string whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _addWhitelisted(keccak256(whitelist), account);
     }
 
     /**
@@ -57,8 +57,31 @@ contract WhitelistAccess is Context, AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function removeWhitelisted(bytes32 whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _removeWhitelisted(whitelist, account);
+    function removeFromWhitelist(string whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _removeWhitelisted(keccak256(whitelist), account);
+    }
+
+    /**
+     * @dev Adds multiple `accounts` to `whitelist`.
+     *
+     * For each of `accounts` if was added, emits a {WhitelistAdded} event.
+     *
+     * Requirements:
+     *
+     * - the caller must have ``role``'s admin role.
+     */
+    function bulkAddToWhitelist(string whitelist, address[] memory accounts) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        bytes32 _whitelist = keccak256(whitelist);
+        for (uint256 i = 0; i < accounts.length; i++) {
+            _addWhitelisted(_whitelist, accounts[i]);
+        }
+    }
+
+    /**
+     * @dev Returns `true` if `account` is present on `whitelist`.
+     */
+    function _isWhitelisted(bytes32 whitelist, address account) internal returns (bool) {
+        return hasRole(whitelist, account);
     }
 
     /**
