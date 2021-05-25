@@ -5,17 +5,18 @@ import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
 import { toWei, ZERO_ADDRESS } from './utils'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { keccak256 } from 'ethers/lib/utils'
 
 use(solidity)
 
 describe('UltiCrowdsale', () => {
+  let admin: SignerWithAddress
   let investor: SignerWithAddress
   let wallet: SignerWithAddress
   let purchaser: SignerWithAddress
   let addrs: SignerWithAddress[]
 
   const rate = BigNumber.from(1)
-  const zeroRate = BigNumber.from(0)
   const value = utils.parseEther('1')
   const tokenSupply = toWei(BigNumber.from(40000000000))
   const expectedTokenAmount = rate.mul(value)
@@ -24,7 +25,7 @@ describe('UltiCrowdsale', () => {
   let crowdsaleFactory: UltiCrowdsale__factory
 
   beforeEach(async () => {
-    ;[wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
+    ;[admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
     tokenFactory = (await ethers.getContractFactory('UltiCoin')) as UltiCoin__factory
     crowdsaleFactory = (await ethers.getContractFactory('UltiCrowdsale')) as UltiCrowdsale__factory
   })
@@ -49,7 +50,7 @@ describe('UltiCrowdsale', () => {
 
     context('once deployed', async function () {
       beforeEach(async function () {
-        this.crowdsale = await crowdsaleFactory.connect(wallet).deploy(wallet.address, this.token.address)
+        this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
         await this.token.transfer(this.crowdsale.address, tokenSupply)
         expect(await this.token.totalSupply()).to.equal(tokenSupply)
       })
@@ -81,6 +82,81 @@ describe('UltiCrowdsale', () => {
         it('has zero rate', async function () {
           const rate = await this.crowdsale.connect(purchaser).rate()
           expect(rate).to.be.equal(0)
+        })
+      })
+
+      context('whitelisting', async function () {
+        const whitelist = 'FIRST_HUNDRED_WHITELIST'
+
+        context('addToWhitelist', async function () {
+          it('reverts when not called by admin', async function () {
+            await expect(
+              this.crowdsale.connect(purchaser).addToWhitelist(whitelist, investor.address)
+            ).to.be.revertedWith(
+              `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
+            )
+          })
+
+          it('adds address to whitelist', async function () {
+            await this.crowdsale.connect(admin).addToWhitelist(whitelist, investor.address)
+            const isWhitelisted = await this.crowdsale.connect(admin).isWhitelisted(whitelist, investor.address)
+            await expect(isWhitelisted).to.be.true
+          })
+
+          it('should log whitelisting', async function () {
+            await expect(this.crowdsale.connect(admin).addToWhitelist(whitelist, investor.address))
+              .to.emit(this.crowdsale, 'WhitelistAdded')
+              .withArgs(keccak256(Buffer.from(whitelist)), investor.address)
+          })
+        })
+
+        context('bulkAddToWhitelist', async function () {
+          let addresses: string[]
+          beforeEach(async function () {
+            addresses = addrs.map(function (a) {
+              return a.address
+            })
+          })
+
+          it('reverts when not called by admin', async function () {
+            await expect(this.crowdsale.connect(purchaser).bulkAddToWhitelist(whitelist, addresses)).to.be.revertedWith(
+              `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
+            )
+          })
+
+          it('adds addresses to whitelist', async function () {
+            await this.crowdsale.connect(admin).bulkAddToWhitelist(whitelist, addresses)
+            for (let address of addresses) {
+              const isWhitelisted = await this.crowdsale.isWhitelisted(whitelist, address)
+              await expect(isWhitelisted).to.be.true
+            }
+          })
+        })
+
+        context('removeFromWhitelist', async function () {
+          beforeEach(async function () {
+            await this.crowdsale.connect(admin).addToWhitelist(whitelist, investor.address)
+          })
+
+          it('reverts when not called by admin', async function () {
+            await expect(
+              this.crowdsale.connect(purchaser).removeFromWhitelist(whitelist, investor.address)
+            ).to.be.revertedWith(
+              `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
+            )
+          })
+
+          it('removes address from whitelist', async function () {
+            await this.crowdsale.connect(admin).removeFromWhitelist(whitelist, investor.address)
+            const isWhitelisted = await this.crowdsale.connect(admin).isWhitelisted(whitelist, investor.address)
+            await expect(isWhitelisted).to.be.false
+          })
+
+          it('should log removing from whitelist', async function () {
+            await expect(this.crowdsale.connect(admin).removeFromWhitelist(whitelist, investor.address))
+              .to.emit(this.crowdsale, 'WhitelistRemoved')
+              .withArgs(keccak256(Buffer.from(whitelist)), investor.address)
+          })
         })
       })
 
