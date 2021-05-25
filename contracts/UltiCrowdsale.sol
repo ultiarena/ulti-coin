@@ -25,6 +25,9 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
     uint256 OPENING_TIME = 1623427200; // 11-06-2021 16:00 UTC
     uint256 CLOSING_TIME = 1630771200; // 04-09-2021 16:00 UTC
 
+    bytes32 public constant FIRST_HUNDRED_WHITELIST = keccak256('FIRST_HUNDRED_WHITELIST');
+    bytes32 public constant PRIVATE_SALE_WHITELIST = keccak256('PRIVATE_SALE_WHITELIST');
+
     uint256 MINIMAL_CONTRIBUTION = 5 * 1e17; // 0.5 BNB
     uint256 MAXIMAL_CONTRIBUTION = 5 * 1e18; // 5 BNB
 
