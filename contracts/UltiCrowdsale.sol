@@ -58,6 +58,10 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         return _stages[_currentStage()].rate;
     }
 
+    function bonus() public view returns (uint256) {
+        return _stages[_currentStage()].bonus;
+    }
+
     function stage() public view returns (CrowdsaleStage) {
         return _currentStage();
     }
@@ -68,6 +72,8 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         override(Crowdsale, TimedCrowdsale)
         onlyWhileOpen
     {
+        Crowdsale._preValidatePurchase(beneficiary, weiAmount);
+
         CrowdsaleStage stage_ = _currentStage();
         if (stage_ == CrowdsaleStage.FirstHundred || stage_ == CrowdsaleStage.PrivateSale) {
             require(
@@ -75,16 +81,18 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
                 'UltiCrowdsale: value sent is too low or too high'
             );
             if (stage_ == CrowdsaleStage.FirstHundred) {
-                // is whitelisted
-                // solhint-disable-previous-line no-empty-blocks
+                require(
+                    _isWhitelisted(FIRST_HUNDRED_WHITELIST, _msgSender()),
+                    'UltiCrowdsale: caller is not on FirstHundred whitelist'
+                );
             }
         }
-
-        Crowdsale._preValidatePurchase(beneficiary, weiAmount);
     }
 
     function _getTokenAmount(uint256 weiAmount) internal view override(Crowdsale) returns (uint256) {
-        return weiAmount * rate();
+        uint256 amount = weiAmount * rate();
+        uint256 _bonus = (amount * bonus()) / 100;
+        return amount + _bonus;
     }
 
     function _processPurchase(address beneficiary, uint256 tokenAmount)
