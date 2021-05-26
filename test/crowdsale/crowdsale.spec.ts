@@ -1,9 +1,9 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { Crowdsale__factory, UltiCoin__factory } from '../typechain'
+import { Crowdsale__factory, UltiCoin__factory } from '../../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
-import { toWei, ZERO_ADDRESS } from './utils'
+import { toWei, ZERO_ADDRESS } from '../common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 use(solidity)

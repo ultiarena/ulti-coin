@@ -2,7 +2,7 @@ import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
 import { UltiCoin__factory, UltiCoin } from '../typechain'
 import { solidity } from 'ethereum-waffle'
-import { formatTokenAmount } from './utils'
+import { formatTokenAmount } from './common'
 
 use(solidity)
 
