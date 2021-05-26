@@ -61,6 +61,14 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         _;
     }
 
+    modifier onlyNotExceedsStageCap(uint256 weiAmount) {
+        require(
+            _stages[_currentStage()].startCap + _stages[_currentStage()].weiRaised + weiAmount <= cap(),
+            'UltiCrowdsale: value sent exceeds maximal cap of stage'
+        );
+        _;
+    }
+
     function rate() public view override(Crowdsale) returns (uint256) {
         return _stages[_currentStage()].rate;
     }
@@ -87,6 +95,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         override(Crowdsale, TimedCrowdsale)
         onlyWhileOpen
         onlyWhileHardcapNotReached
+        onlyNotExceedsStageCap(weiAmount)
     {
         Crowdsale._preValidatePurchase(beneficiary, weiAmount);
 
