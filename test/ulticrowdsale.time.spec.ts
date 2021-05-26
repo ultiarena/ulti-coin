@@ -4,12 +4,10 @@ import { UltiCrowdsale__factory, UltiCoin__factory, UltiCrowdsale } from '../typ
 import { solidity } from 'ethereum-waffle'
 import { utils } from 'ethers'
 import {
-  FIRST_HUNDRED_WHITELIST,
   stagesData,
   MAXIMAL_CONTRIBUTION,
   MINIMAL_CONTRIBUTION,
   OPENING_TIME,
-  PRIVATE_SALE_WHITELIST,
   Stages,
   TOKEN_SUPPLY,
   ZERO_ADDRESS,
@@ -48,208 +46,222 @@ describe('UltiCrowdsale time dependent', () => {
       await ethers.provider.send('evm_mine', [])
     })
 
-    context(`and in ${Stages[Stages.FirstHundred]} stage`, async function () {
-      const stage = Stages.FirstHundred
-      const stageData = stagesData[stage]
+    const whitelistStages = [Stages.FirstHundred, Stages.PrivateSale]
 
-      it(`should be in ${Stages[stage]} stage`, async function () {
-        const stage = await this.crowdsale.connect(purchaser).stage()
-        expect(stage).to.be.equal(stage.valueOf())
-      })
+    whitelistStages.forEach(function (stage) {
+      context(`and in ${Stages[stage]} stage`, async function () {
+        const stageData = stagesData[stage]
 
-      it(`should set stage bonus`, async function () {
-        expect(await this.crowdsale.connect(purchaser).bonus()).to.be.equal(stageData.bonus)
-      })
-
-      it(`should set stage rate`, async function () {
-        expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(stageData.rate)
-      })
-
-      context('for not whitelisted', async function () {
         beforeEach(async function () {
-          await expect(
-            await this.crowdsale.connect(admin).isWhitelisted(FIRST_HUNDRED_WHITELIST, purchaser.address)
-          ).to.be.false
-          await expect(
-            await this.crowdsale.connect(admin).isWhitelisted(FIRST_HUNDRED_WHITELIST, investor.address)
-          ).to.be.false
+          const beforeClosingTimestamp = Number(stageData.closeTimestamp) - Number(3600)
+          await ethers.provider.send('evm_setNextBlockTimestamp', [beforeClosingTimestamp])
+          await ethers.provider.send('evm_mine', [])
         })
 
-        it('reverts on tokens withdrawal', async function () {
-          await expect(this.crowdsale.connect(purchaser).withdrawTokens(investor.address)).to.be.revertedWith(
-            'PostDeliveryCrowdsale: not closed'
-          )
+        it(`should be in ${Stages[stage]} stage`, async function () {
+          const stage = await this.crowdsale.connect(purchaser).stage()
+          expect(stage).to.be.equal(stage.valueOf())
         })
 
-        describe('accepting payments', function () {
-          it('reverts on positive payments', async function () {
-            await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: value })).to.be.revertedWith(
-              `UltiCrowdsale: beneficiary is not on ${Stages[stage]} whitelist`
-            )
-          })
-
-          it('reverts on tokens purchase', async function () {
-            await expect(
-              this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
-            ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on ${Stages[stage]} whitelist`)
-          })
-        })
-      })
-
-      context(`for whitelisted on ${PRIVATE_SALE_WHITELIST}`, async function () {
-        beforeEach(async function () {
-          await this.crowdsale
-            .connect(admin)
-            .bulkAddToWhitelist(PRIVATE_SALE_WHITELIST, [purchaser.address, investor.address])
-
-          await expect(
-            await this.crowdsale.connect(admin).isWhitelisted(PRIVATE_SALE_WHITELIST, investor.address)
-          ).to.be.true
-
-          await expect(
-            await this.crowdsale.connect(admin).isWhitelisted(FIRST_HUNDRED_WHITELIST, investor.address)
-          ).to.be.false
+        it(`should set stage bonus`, async function () {
+          expect(await this.crowdsale.connect(purchaser).bonus()).to.be.equal(stageData.bonus)
         })
 
-        it('reverts on tokens withdrawal', async function () {
-          await expect(this.crowdsale.connect(purchaser).withdrawTokens(investor.address)).to.be.revertedWith(
-            'PostDeliveryCrowdsale: not closed'
-          )
+        it(`should set stage rate`, async function () {
+          expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(stageData.rate)
         })
 
-        describe('accepting payments', function () {
-          it('reverts on positive payments', async function () {
-            await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: value })).to.be.revertedWith(
-              `UltiCrowdsale: beneficiary is not on ${Stages[stage]} whitelist`
-            )
-          })
-
-          it('reverts on tokens purchase', async function () {
-            await expect(
-              this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
-            ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on ${Stages[stage]} whitelist`)
-          })
-        })
-      })
-
-      context(`for whitelisted on ${FIRST_HUNDRED_WHITELIST}`, async function () {
-        describe('accepting payments', function () {
-          const purchaseValue = utils.parseEther('3')
-          const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
-          const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
-          const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
-
+        context('for not whitelisted', async function () {
           beforeEach(async function () {
-            await this.crowdsale
-              .connect(admin)
-              .bulkAddToWhitelist(FIRST_HUNDRED_WHITELIST, [purchaser.address, investor.address])
+            await expect(
+              await this.crowdsale.connect(admin).isWhitelisted(stageData.whitelists?.[0], purchaser.address)
+            ).to.be.false
+            await expect(
+              await this.crowdsale.connect(admin).isWhitelisted(stageData.whitelists?.[0], investor.address)
+            ).to.be.false
           })
 
-          describe('bare payments', function () {
-            it('reverts on zero-valued payments', async function () {
-              await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: 0 })).to.be.revertedWith(
-                'Crowdsale: weiAmount is 0'
+          it('reverts on tokens withdrawal', async function () {
+            await expect(this.crowdsale.connect(purchaser).withdrawTokens(investor.address)).to.be.revertedWith(
+              'PostDeliveryCrowdsale: not closed'
+            )
+          })
+
+          describe('accepting payments', function () {
+            it('reverts on positive payments', async function () {
+              await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: value })).to.be.revertedWith(
+                `UltiCrowdsale: beneficiary is not on whitelist`
               )
             })
 
-            it('reverts when value lower than MINIMAL_CONTRIBUTION', async function () {
+            it('reverts on tokens purchase', async function () {
               await expect(
-                purchaser.sendTransaction({ to: this.crowdsale.address, value: MINIMAL_CONTRIBUTION.sub(1) })
-              ).to.be.revertedWith('UltiCrowdsale: value sent is lower than minimal contribution')
-            })
-
-            it('reverts when value higher than MAXIMAL_CONTRIBUTION', async function () {
-              await expect(
-                purchaser.sendTransaction({ to: this.crowdsale.address, value: MAXIMAL_CONTRIBUTION.add(1) })
-              ).to.be.revertedWith('UltiCrowdsale: value sent is higher than maximal contribution')
-            })
-
-            it('reverts when value exceeds beneficiary limit', async function () {
-              await purchaser.sendTransaction({ to: this.crowdsale.address, value: MINIMAL_CONTRIBUTION })
-              await expect(
-                purchaser.sendTransaction({ to: this.crowdsale.address, value: MAXIMAL_CONTRIBUTION })
-              ).to.be.revertedWith('UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit')
-            })
-
-            it('should accept payments', async function () {
-              await expect(
-                purchaser.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
-              ).to.not.be.reverted
-            })
-
-            it('should log purchase', async function () {
-              await expect(investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue }))
-                .to.emit(this.crowdsale, 'TokensPurchased')
-                .withArgs(investor.address, investor.address, purchaseValue, expectedTokenAmount)
-            })
-
-            it('should assign tokens to sender', async function () {
-              await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
-              expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
-            })
-
-            it('should forward funds to wallet', async function () {
-              const startBalance = await wallet.getBalance()
-              await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
-              const endBalance = await wallet.getBalance()
-              expect(endBalance).to.be.eq(startBalance.add(purchaseValue))
+                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
+              ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on whitelist`)
             })
           })
+        })
 
-          describe('buyTokens', function () {
-            it('reverts on zero-valued payments', async function () {
+        if (stageData.wrongWhitelist !== undefined) {
+          context(`for whitelisted on ${stageData.wrongWhitelist}`, async function () {
+            beforeEach(async function () {
+              await this.crowdsale
+                .connect(admin)
+                .bulkAddToWhitelist(stageData.wrongWhitelist, [purchaser.address, investor.address])
+
               await expect(
-                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: 0 })
-              ).to.be.revertedWith('Crowdsale: weiAmount is 0')
-            })
+                await this.crowdsale.connect(admin).isWhitelisted(stageData.wrongWhitelist, investor.address)
+              ).to.be.true
 
-            it('requires a non-null beneficiary', async function () {
               await expect(
-                this.crowdsale.connect(purchaser).buyTokens(ZERO_ADDRESS, { value: purchaseValue })
-              ).to.be.revertedWith('Crowdsale: beneficiary is the zero address')
+                await this.crowdsale.connect(admin).isWhitelisted(stageData.whitelists?.[0], investor.address)
+              ).to.be.false
             })
 
-            it('reverts when value lower than MINIMAL_CONTRIBUTION', async function () {
-              await expect(
-                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MINIMAL_CONTRIBUTION.sub(1) })
-              ).to.be.revertedWith('UltiCrowdsale: value sent is lower than minimal contribution')
+            it('reverts on tokens withdrawal', async function () {
+              await expect(this.crowdsale.connect(purchaser).withdrawTokens(investor.address)).to.be.revertedWith(
+                'PostDeliveryCrowdsale: not closed'
+              )
             })
 
-            it('reverts when value higher than MAXIMAL_CONTRIBUTION', async function () {
-              await expect(
-                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MAXIMAL_CONTRIBUTION.add(1) })
-              ).to.be.revertedWith('UltiCrowdsale: value sent is higher than maximal contribution')
-            })
+            describe('accepting payments', function () {
+              it('reverts on positive payments', async function () {
+                await expect(
+                  purchaser.sendTransaction({ to: this.crowdsale.address, value: value })
+                ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on whitelist`)
+              })
 
-            it('reverts when value exceeds beneficiary limit', async function () {
-              await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MINIMAL_CONTRIBUTION })
-              await expect(
-                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MAXIMAL_CONTRIBUTION })
-              ).to.be.revertedWith('UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit')
+              it('reverts on tokens purchase', async function () {
+                await expect(
+                  this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
+                ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on whitelist`)
+              })
             })
+          })
+        }
+        stageData.whitelists?.forEach(function (whitelist) {
+          context(`for whitelisted on ${whitelist}`, async function () {
+            describe('accepting payments', function () {
+              const purchaseValue = utils.parseEther('3')
+              const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
+              const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
+              const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
-            it('should accept payments', async function () {
-              await expect(
-                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
-              ).to.not.be.reverted
-            })
+              beforeEach(async function () {
+                await this.crowdsale.connect(admin).bulkAddToWhitelist(whitelist, [purchaser.address, investor.address])
+              })
 
-            it('should log purchase', async function () {
-              await expect(this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue }))
-                .to.emit(this.crowdsale, 'TokensPurchased')
-                .withArgs(purchaser.address, investor.address, purchaseValue, expectedTokenAmount)
-            })
+              describe('bare payments', function () {
+                it('reverts on zero-valued payments', async function () {
+                  await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: 0 })).to.be.revertedWith(
+                    'Crowdsale: weiAmount is 0'
+                  )
+                })
 
-            it('should assign tokens to beneficiary', async function () {
-              await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
-              expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
-            })
+                it('reverts when value lower than MINIMAL_CONTRIBUTION', async function () {
+                  await expect(
+                    purchaser.sendTransaction({ to: this.crowdsale.address, value: MINIMAL_CONTRIBUTION.sub(1) })
+                  ).to.be.revertedWith('UltiCrowdsale: value sent is lower than minimal contribution')
+                })
 
-            it('should forward funds to wallet', async function () {
-              const startBalance = await wallet.getBalance()
-              await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
-              const endBalance = await wallet.getBalance()
-              expect(endBalance).to.be.eq(startBalance.add(purchaseValue))
+                it('reverts when value higher than MAXIMAL_CONTRIBUTION', async function () {
+                  await expect(
+                    purchaser.sendTransaction({ to: this.crowdsale.address, value: MAXIMAL_CONTRIBUTION.add(1) })
+                  ).to.be.revertedWith('UltiCrowdsale: value sent is higher than maximal contribution')
+                })
+
+                it('reverts when value exceeds beneficiary limit', async function () {
+                  await purchaser.sendTransaction({ to: this.crowdsale.address, value: MINIMAL_CONTRIBUTION })
+                  await expect(
+                    purchaser.sendTransaction({ to: this.crowdsale.address, value: MAXIMAL_CONTRIBUTION })
+                  ).to.be.revertedWith('UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit')
+                })
+
+                it('should accept payments', async function () {
+                  await expect(
+                    purchaser.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
+                  ).to.not.be.reverted
+                })
+
+                it('should log purchase', async function () {
+                  await expect(investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue }))
+                    .to.emit(this.crowdsale, 'TokensPurchased')
+                    .withArgs(investor.address, investor.address, purchaseValue, expectedTokenAmount)
+                })
+
+                it('should assign tokens to sender', async function () {
+                  await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
+                  expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
+                })
+
+                it('should forward funds to wallet', async function () {
+                  const startBalance = await wallet.getBalance()
+                  await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
+                  const endBalance = await wallet.getBalance()
+                  expect(endBalance).to.be.eq(startBalance.add(purchaseValue))
+                })
+              })
+
+              describe('buyTokens', function () {
+                it('reverts on zero-valued payments', async function () {
+                  await expect(
+                    this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: 0 })
+                  ).to.be.revertedWith('Crowdsale: weiAmount is 0')
+                })
+
+                it('requires a non-null beneficiary', async function () {
+                  await expect(
+                    this.crowdsale.connect(purchaser).buyTokens(ZERO_ADDRESS, { value: purchaseValue })
+                  ).to.be.revertedWith('Crowdsale: beneficiary is the zero address')
+                })
+
+                it('reverts when value lower than MINIMAL_CONTRIBUTION', async function () {
+                  await expect(
+                    this.crowdsale
+                      .connect(purchaser)
+                      .buyTokens(investor.address, { value: MINIMAL_CONTRIBUTION.sub(1) })
+                  ).to.be.revertedWith('UltiCrowdsale: value sent is lower than minimal contribution')
+                })
+
+                it('reverts when value higher than MAXIMAL_CONTRIBUTION', async function () {
+                  await expect(
+                    this.crowdsale
+                      .connect(purchaser)
+                      .buyTokens(investor.address, { value: MAXIMAL_CONTRIBUTION.add(1) })
+                  ).to.be.revertedWith('UltiCrowdsale: value sent is higher than maximal contribution')
+                })
+
+                it('reverts when value exceeds beneficiary limit', async function () {
+                  await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MINIMAL_CONTRIBUTION })
+                  await expect(
+                    this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MAXIMAL_CONTRIBUTION })
+                  ).to.be.revertedWith('UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit')
+                })
+
+                it('should accept payments', async function () {
+                  await expect(
+                    this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                  ).to.not.be.reverted
+                })
+
+                it('should log purchase', async function () {
+                  await expect(this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue }))
+                    .to.emit(this.crowdsale, 'TokensPurchased')
+                    .withArgs(purchaser.address, investor.address, purchaseValue, expectedTokenAmount)
+                })
+
+                it('should assign tokens to beneficiary', async function () {
+                  await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                  expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
+                })
+
+                it('should forward funds to wallet', async function () {
+                  const startBalance = await wallet.getBalance()
+                  await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                  const endBalance = await wallet.getBalance()
+                  expect(endBalance).to.be.eq(startBalance.add(purchaseValue))
+                })
+              })
             })
           })
         })

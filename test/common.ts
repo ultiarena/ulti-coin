@@ -42,6 +42,8 @@ type StageData = {
   bonus: BigNumberish
   cap: BigNumberish
   startCap: BigNumberish
+  whitelists?: string[]
+  wrongWhitelist?: string
 }
 
 const stagesData: StageData[] = [
@@ -58,6 +60,16 @@ const stagesData: StageData[] = [
     bonus: 30,
     cap: utils.parseEther('2500'),
     startCap: 0,
+    whitelists: [FIRST_HUNDRED_WHITELIST],
+    wrongWhitelist: PRIVATE_SALE_WHITELIST,
+  },
+  {
+    closeTimestamp: 1624723200,
+    rate: 5263157,
+    bonus: 30,
+    cap: utils.parseEther('2500'),
+    startCap: 0,
+    whitelists: [FIRST_HUNDRED_WHITELIST, PRIVATE_SALE_WHITELIST],
   },
 ]
 

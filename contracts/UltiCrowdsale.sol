@@ -112,11 +112,11 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
             bool isPrivateSaleWhitelisted = _isWhitelisted(PRIVATE_SALE_WHITELIST, beneficiary);
 
             if (stage_ == CrowdsaleStage.FirstHundred) {
-                require(isFirstHundredWhitelisted, 'UltiCrowdsale: beneficiary is not on FirstHundred whitelist');
+                require(isFirstHundredWhitelisted, 'UltiCrowdsale: beneficiary is not on whitelist');
             } else {
                 require(
                     isFirstHundredWhitelisted || isPrivateSaleWhitelisted,
-                    'UltiCrowdsale: beneficiary is not on FirstHundred nor on PrivateSale whitelist'
+                    'UltiCrowdsale: beneficiary is not on whitelist'
                 );
             }
         }
