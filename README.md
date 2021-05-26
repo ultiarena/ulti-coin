@@ -1,5 +1,10 @@
 # ULTI Coin contracts
 
+
+
+[![Lint](https://github.com/ultiarena/ulti-contracts/actions/workflows/lint.yml/badge.svg)](https://github.com/ultiarena/ulti-contracts/actions/workflows/lint.yml)
+[![Tests](https://github.com/ultiarena/ulti-contracts/actions/workflows/tests.yml/badge.svg)](https://github.com/ultiarena/ulti-contracts/actions/workflows/tests.yml)
+
 ## Usage
 
 Format files:
