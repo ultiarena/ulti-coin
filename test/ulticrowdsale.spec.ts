@@ -3,7 +3,7 @@ import { ethers } from 'hardhat'
 import { UltiCrowdsale__factory, UltiCoin__factory } from '../typechain'
 import { solidity } from 'ethereum-waffle'
 import { utils } from 'ethers'
-import { GUARANTEED_SPOT_WHITELIST, Stages, TOKEN_SUPPLY, ZERO_ADDRESS } from './common'
+import { GUARANTEED_SPOT_WHITELIST, Stages, CROWDSALE_SUPPLY, ZERO_ADDRESS, INITIAL_SUPPLY } from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { keccak256 } from 'ethers/lib/utils'
 
@@ -36,12 +36,12 @@ describe('UltiCrowdsale', () => {
   context('with token', async function () {
     beforeEach(async function () {
       this.token = await tokenFactory.connect(wallet).deploy()
-      expect(await this.token.balanceOf(wallet.address)).to.equal(TOKEN_SUPPLY)
+      expect(await this.token.balanceOf(wallet.address)).to.equal(INITIAL_SUPPLY)
     })
 
     it('requires a non-null wallet', async function () {
       this.token = await tokenFactory.connect(wallet).deploy()
-      expect(await this.token.balanceOf(wallet.address)).to.equal(TOKEN_SUPPLY)
+      expect(await this.token.balanceOf(wallet.address)).to.equal(INITIAL_SUPPLY)
 
       await expect(crowdsaleFactory.deploy(ZERO_ADDRESS, this.token.address)).to.be.revertedWith(
         'Crowdsale: wallet is the zero address'
@@ -51,7 +51,7 @@ describe('UltiCrowdsale', () => {
     context('once deployed and not open', async function () {
       beforeEach(async function () {
         this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
-        await this.token.transfer(this.crowdsale.address, TOKEN_SUPPLY)
+        await this.token.transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
       })
 
       it('reverts on positive payments', async function () {

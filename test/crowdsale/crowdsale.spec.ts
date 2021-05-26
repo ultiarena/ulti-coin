@@ -3,7 +3,7 @@ import { ethers } from 'hardhat'
 import { Crowdsale__factory, UltiCoin__factory } from '../../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
-import { toWei, ZERO_ADDRESS } from '../common'
+import { CROWDSALE_SUPPLY, INITIAL_SUPPLY, MAX_SUPPLY, toWei, ZERO_ADDRESS } from '../common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 use(solidity)
@@ -17,7 +17,6 @@ describe('Crowdsale', () => {
   const rate = BigNumber.from(1)
   const zeroRate = BigNumber.from(0)
   const value = utils.parseEther('1')
-  const tokenSupply = toWei(BigNumber.from(40000000000))
   const expectedTokenAmount = rate.mul(value)
 
   let tokenFactory: UltiCoin__factory
@@ -38,7 +37,7 @@ describe('Crowdsale', () => {
   context('with token', async function () {
     beforeEach(async function () {
       this.token = await tokenFactory.connect(wallet).deploy()
-      expect(await this.token.balanceOf(wallet.address)).to.equal(tokenSupply)
+      expect(await this.token.balanceOf(wallet.address)).to.equal(INITIAL_SUPPLY)
     })
 
     it('requires a non-zero rate', async function () {
@@ -56,8 +55,8 @@ describe('Crowdsale', () => {
     context('once deployed', async function () {
       beforeEach(async function () {
         this.crowdsale = await crowdsaleFactory.connect(wallet).deploy(rate, wallet.address, this.token.address)
-        await this.token.transfer(this.crowdsale.address, tokenSupply)
-        expect(await this.token.totalSupply()).to.equal(tokenSupply)
+        await this.token.transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
+        expect(await this.token.totalSupply()).to.equal(INITIAL_SUPPLY)
       })
 
       describe('accepting payments', function () {

@@ -13,7 +13,9 @@ const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 /* UltiCoin consts */
 
-const TOKEN_SUPPLY = toWei(BigNumber.from(40000000000))
+const MAX_SUPPLY = toWei(BigNumber.from(250000000000))
+const INITIAL_SUPPLY = toWei(BigNumber.from(160620000000))
+const CROWDSALE_SUPPLY = toWei(BigNumber.from(59370000000))
 
 /* Crowdsale consts */
 
@@ -71,9 +73,46 @@ const stagesData: StageData[] = [
     startCap: 0,
     whitelists: [GUARANTEED_SPOT_WHITELIST, PRIVATE_SALE_WHITELIST],
   },
+  {
+    closeTimestamp: 1625932800,
+    rate: 2222222,
+    bonus: 10,
+    cap: utils.parseEther('3500'),
+    startCap: utils.parseEther('2500'),
+  },
+  {
+    closeTimestamp: 1627142400,
+    rate: 1408450,
+    bonus: 5,
+    cap: utils.parseEther('6000'),
+    startCap: utils.parseEther('6000'),
+  },
+  {
+    closeTimestamp: 1628352000,
+    rate: 1030927,
+    bonus: 3,
+    cap: utils.parseEther('9000'),
+    startCap: utils.parseEther('12000'),
+  },
+  {
+    closeTimestamp: 1629561600,
+    rate: 800000,
+    bonus: 0,
+    cap: utils.parseEther('12500'),
+    startCap: utils.parseEther('21000'),
+  },
+  {
+    closeTimestamp: 1630771200,
+    rate: 666666,
+    bonus: 0,
+    cap: utils.parseEther('16500'),
+    startCap: utils.parseEther('33500'),
+  },
 ]
 
 export {
+  MAX_SUPPLY,
+  INITIAL_SUPPLY,
   stagesData,
   ZERO_ADDRESS,
   Stages,
@@ -81,7 +120,7 @@ export {
   CLOSING_TIME,
   GUARANTEED_SPOT_WHITELIST,
   PRIVATE_SALE_WHITELIST,
-  TOKEN_SUPPLY,
+  CROWDSALE_SUPPLY,
   MINIMAL_CONTRIBUTION,
   MAXIMAL_CONTRIBUTION,
 }
