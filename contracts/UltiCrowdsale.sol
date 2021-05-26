@@ -92,14 +92,22 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
 
         CrowdsaleStage stage_ = _currentStage();
         if (stage_ == CrowdsaleStage.FirstHundred || stage_ == CrowdsaleStage.PrivateSale) {
+            require(weiAmount >= MINIMAL_CONTRIBUTION, 'UltiCrowdsale: value sent is lower than minimal contribution');
+            require(weiAmount <= MAXIMAL_CONTRIBUTION, 'UltiCrowdsale: value sent is higher than maximal contribution');
             require(
-                weiAmount >= MINIMAL_CONTRIBUTION && weiAmount <= MAXIMAL_CONTRIBUTION,
-                'UltiCrowdsale: value sent is too low or too high'
+                balanceOf(beneficiary) + weiAmount <= MAXIMAL_CONTRIBUTION,
+                'UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit'
             );
+
+            bool isFirstHundredWhitelisted = _isWhitelisted(FIRST_HUNDRED_WHITELIST, beneficiary);
+            bool isPrivateSaleWhitelisted = _isWhitelisted(PRIVATE_SALE_WHITELIST, beneficiary);
+
             if (stage_ == CrowdsaleStage.FirstHundred) {
+                require(isFirstHundredWhitelisted, 'UltiCrowdsale: beneficiary is not on FirstHundred whitelist');
+            } else {
                 require(
-                    _isWhitelisted(FIRST_HUNDRED_WHITELIST, _msgSender()),
-                    'UltiCrowdsale: caller is not on FirstHundred whitelist'
+                    isFirstHundredWhitelisted || isPrivateSaleWhitelisted,
+                    'UltiCrowdsale: beneficiary is not on FirstHundred nor on PrivateSale whitelist'
                 );
             }
         }
@@ -118,8 +126,11 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         PostDeliveryCrowdsale._processPurchase(beneficiary, tokenAmount);
     }
 
-    function _updatePurchasingState(address beneficiary, uint256 weiAmount) internal override(Crowdsale) {
-        // solhint-disable-previous-line no-empty-blocks
+    function _updatePurchasingState(
+        address, /* beneficiary */
+        uint256 weiAmount
+    ) internal override(Crowdsale) {
+        _stages[_currentStage()].weiRaised = _stages[_currentStage()].weiRaised + weiAmount;
     }
 
     function _postValidatePurchase(address beneficiary, uint256 weiAmount) internal view override(Crowdsale) {

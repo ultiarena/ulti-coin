@@ -84,14 +84,14 @@ describe('UltiCrowdsale time dependent', () => {
         describe('accepting payments', function () {
           it('reverts on positive payments', async function () {
             await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: value })).to.be.revertedWith(
-              'UltiCrowdsale: caller is not on FirstHundred whitelist'
+              `UltiCrowdsale: beneficiary is not on ${Stages[stage]} whitelist`
             )
           })
 
           it('reverts on tokens purchase', async function () {
             await expect(
               this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
-            ).to.be.revertedWith('UltiCrowdsale: caller is not on FirstHundred whitelist')
+            ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on ${Stages[stage]} whitelist`)
           })
         })
       })
@@ -120,14 +120,14 @@ describe('UltiCrowdsale time dependent', () => {
         describe('accepting payments', function () {
           it('reverts on positive payments', async function () {
             await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: value })).to.be.revertedWith(
-              'UltiCrowdsale: caller is not on FirstHundred whitelist'
+              `UltiCrowdsale: beneficiary is not on ${Stages[stage]} whitelist`
             )
           })
 
           it('reverts on tokens purchase', async function () {
             await expect(
               this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
-            ).to.be.revertedWith('UltiCrowdsale: caller is not on FirstHundred whitelist')
+            ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on ${Stages[stage]} whitelist`)
           })
         })
       })
@@ -152,16 +152,23 @@ describe('UltiCrowdsale time dependent', () => {
               )
             })
 
-            it('reverts when not reaching MINIMAL_CONTRIBUTION payments', async function () {
+            it('reverts when value lower than MINIMAL_CONTRIBUTION', async function () {
               await expect(
                 purchaser.sendTransaction({ to: this.crowdsale.address, value: MINIMAL_CONTRIBUTION.sub(1) })
-              ).to.be.revertedWith('UltiCrowdsale: value sent is too low or too high')
+              ).to.be.revertedWith('UltiCrowdsale: value sent is lower than minimal contribution')
             })
 
-            it('reverts when exceeding MAXIMAL_CONTRIBUTION payments', async function () {
+            it('reverts when value higher than MAXIMAL_CONTRIBUTION', async function () {
               await expect(
                 purchaser.sendTransaction({ to: this.crowdsale.address, value: MAXIMAL_CONTRIBUTION.add(1) })
-              ).to.be.revertedWith('UltiCrowdsale: value sent is too low or too high')
+              ).to.be.revertedWith('UltiCrowdsale: value sent is higher than maximal contribution')
+            })
+
+            it('reverts when value exceeds beneficiary limit', async function () {
+              await purchaser.sendTransaction({ to: this.crowdsale.address, value: MINIMAL_CONTRIBUTION })
+              await expect(
+                purchaser.sendTransaction({ to: this.crowdsale.address, value: MAXIMAL_CONTRIBUTION })
+              ).to.be.revertedWith('UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit')
             })
 
             it('should accept payments', async function () {
@@ -202,16 +209,23 @@ describe('UltiCrowdsale time dependent', () => {
               ).to.be.revertedWith('Crowdsale: beneficiary is the zero address')
             })
 
-            it('reverts when not reaching MINIMAL_CONTRIBUTION payments', async function () {
+            it('reverts when value lower than MINIMAL_CONTRIBUTION', async function () {
               await expect(
                 this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MINIMAL_CONTRIBUTION.sub(1) })
-              ).to.be.revertedWith('UltiCrowdsale: value sent is too low or too high')
+              ).to.be.revertedWith('UltiCrowdsale: value sent is lower than minimal contribution')
             })
 
-            it('reverts when exceeding MAXIMAL_CONTRIBUTION payments', async function () {
+            it('reverts when value higher than MAXIMAL_CONTRIBUTION', async function () {
               await expect(
                 this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MAXIMAL_CONTRIBUTION.add(1) })
-              ).to.be.revertedWith('UltiCrowdsale: value sent is too low or too high')
+              ).to.be.revertedWith('UltiCrowdsale: value sent is higher than maximal contribution')
+            })
+
+            it('reverts when value exceeds beneficiary limit', async function () {
+              await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MINIMAL_CONTRIBUTION })
+              await expect(
+                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MAXIMAL_CONTRIBUTION })
+              ).to.be.revertedWith('UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit')
             })
 
             it('should accept payments', async function () {
