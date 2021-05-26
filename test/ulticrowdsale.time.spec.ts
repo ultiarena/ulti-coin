@@ -18,7 +18,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 use(solidity)
 
-describe('UltiCrowdsale', () => {
+describe('UltiCrowdsale time dependent', () => {
   let admin: SignerWithAddress
   let investor: SignerWithAddress
   let wallet: SignerWithAddress

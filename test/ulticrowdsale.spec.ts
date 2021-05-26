@@ -9,7 +9,7 @@ import { keccak256 } from 'ethers/lib/utils'
 
 use(solidity)
 
-describe('UltiCrowdsale time dependent', () => {
+describe('UltiCrowdsale', () => {
   let admin: SignerWithAddress
   let investor: SignerWithAddress
   let wallet: SignerWithAddress
@@ -73,13 +73,23 @@ describe('UltiCrowdsale time dependent', () => {
       })
 
       it('is in Inactive stage', async function () {
-        const stage = await this.crowdsale.connect(purchaser).stage()
-        expect(stage).to.be.equal(Stages.Inactive.valueOf())
+        expect(await this.crowdsale.connect(purchaser).stage()).to.be.equal(Stages.Inactive.valueOf())
       })
 
       it('has zero rate', async function () {
-        const rate = await this.crowdsale.connect(purchaser).rate()
-        expect(rate).to.be.equal(0)
+        expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(0)
+      })
+
+      it('has zero bonus', async function () {
+        expect(await this.crowdsale.connect(purchaser).bonus()).to.be.equal(0)
+      })
+
+      it('has zero cap', async function () {
+        expect(await this.crowdsale.connect(purchaser).cap()).to.be.equal(0)
+      })
+
+      it('has not reached hardcap', async function () {
+        expect(await this.crowdsale.connect(purchaser).hardcapReached()).to.be.false
       })
 
       context('whitelisting', async function () {
