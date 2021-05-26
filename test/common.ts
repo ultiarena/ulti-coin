@@ -36,16 +36,33 @@ const PRIVATE_SALE_WHITELIST = 'PRIVATE_SALE_WHITELIST'
 const MINIMAL_CONTRIBUTION = utils.parseEther('0.5')
 const MAXIMAL_CONTRIBUTION = utils.parseEther('5')
 
-const firstHundred = {
-  closeTimestamp: 1623513600,
-  rate: 5263157,
-  bonus: 30,
-  cap: utils.parseEther('2500'),
-  startCap: 0,
+type StageData = {
+  closeTimestamp: BigNumberish
+  rate: BigNumberish
+  bonus: BigNumberish
+  cap: BigNumberish
+  startCap: BigNumberish
 }
 
+const stagesData: StageData[] = [
+  {
+    closeTimestamp: 0,
+    rate: 0,
+    bonus: 0,
+    cap: 0,
+    startCap: 0,
+  },
+  {
+    closeTimestamp: 1623513600,
+    rate: 5263157,
+    bonus: 30,
+    cap: utils.parseEther('2500'),
+    startCap: 0,
+  },
+]
+
 export {
-  firstHundred,
+  stagesData,
   ZERO_ADDRESS,
   Stages,
   OPENING_TIME,

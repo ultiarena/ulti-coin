@@ -31,6 +31,8 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
     uint256 MINIMAL_CONTRIBUTION = 5 * 1e17; // 0.5 BNB
     uint256 MAXIMAL_CONTRIBUTION = 5 * 1e18; // 5 BNB
 
+    uint256 HARD_CAP = 50000 * 1e18; // 50000 BNB
+
     constructor(address payable wallet_, IERC20 token_)
         Crowdsale(1, wallet_, token_)
         TimedCrowdsale(OPENING_TIME, CLOSING_TIME)
@@ -48,10 +50,15 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         _setupCrowdsaleStage(CrowdsaleStage.Presale2, 1627142400, 1408450, 5, 6000 * 1e18, 6000 * 1e18);
         // closing: 07-08-2021 16:00 UTC, rate: 1 / 0.00000097 BNB, bonus: 3%, cap: 9000 BNB, startCap: 12000 BNB
         _setupCrowdsaleStage(CrowdsaleStage.Presale3, 1628352000, 1030927, 3, 9000 * 1e18, 12000 * 1e18);
-        // closing: 21-08-2021 16:00 UTC, rate: 1 / 0.00000125 BNB, bonus: 0%, cap: 13750 BNB, startCap: 21000 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale4, 1629561600, 800000, 0, 13750 * 1e18, 21000 * 1e18);
-        // closing: 04-09-2021 16:00 UTC, rate: 1 / 0.00000150 BNB, bonus: 0%, cap: 18000 BNB, startCap: 34750 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale5, 1630771200, 666666, 0, 18000 * 1e18, 34750 * 1e18);
+        // closing: 21-08-2021 16:00 UTC, rate: 1 / 0.00000125 BNB, bonus: 0%, cap: 12500 BNB, startCap: 21000 BNB
+        _setupCrowdsaleStage(CrowdsaleStage.Presale4, 1629561600, 800000, 0, 12500 * 1e18, 21000 * 1e18);
+        // closing: 04-09-2021 16:00 UTC, rate: 1 / 0.00000150 BNB, bonus: 0%, cap: 16500 BNB, startCap: 33500 BNB
+        _setupCrowdsaleStage(CrowdsaleStage.Presale5, 1630771200, 666666, 0, 16500 * 1e18, 33500 * 1e18);
+    }
+
+    modifier onlyWhileHardcapNotReached() {
+        require(!hardcapReached(), 'UltiCrowdsale: Hardcap is reached');
+        _;
     }
 
     function rate() public view override(Crowdsale) returns (uint256) {
@@ -66,11 +73,20 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         return _currentStage();
     }
 
+    function cap() public view returns (uint256) {
+        return _stages[_currentStage()].startCap + _stages[_currentStage()].cap;
+    }
+
+    function hardcapReached() public view returns (bool) {
+        return weiRaised() >= HARD_CAP;
+    }
+
     function _preValidatePurchase(address beneficiary, uint256 weiAmount)
         internal
         view
         override(Crowdsale, TimedCrowdsale)
         onlyWhileOpen
+        onlyWhileHardcapNotReached
     {
         Crowdsale._preValidatePurchase(beneficiary, weiAmount);
 

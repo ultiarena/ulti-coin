@@ -2,10 +2,10 @@ import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
 import { UltiCrowdsale__factory, UltiCoin__factory, UltiCrowdsale } from '../typechain'
 import { solidity } from 'ethereum-waffle'
-import { BigNumberish, utils } from 'ethers'
+import { utils } from 'ethers'
 import {
   FIRST_HUNDRED_WHITELIST,
-  firstHundred,
+  stagesData,
   MAXIMAL_CONTRIBUTION,
   MINIMAL_CONTRIBUTION,
   OPENING_TIME,
@@ -48,10 +48,21 @@ describe('UltiCrowdsale', () => {
       await ethers.provider.send('evm_mine', [])
     })
 
-    context('and in FirstHundred stage', async function () {
-      it('should be in FirstHundred stage', async function () {
+    context(`and in ${Stages[Stages.FirstHundred]} stage`, async function () {
+      const stage = Stages.FirstHundred
+      const stageData = stagesData[stage]
+
+      it(`should be in ${Stages[stage]} stage`, async function () {
         const stage = await this.crowdsale.connect(purchaser).stage()
-        expect(stage).to.be.equal(Stages.FirstHundred.valueOf())
+        expect(stage).to.be.equal(stage.valueOf())
+      })
+
+      it(`should set stage bonus`, async function () {
+        expect(await this.crowdsale.connect(purchaser).bonus()).to.be.equal(stageData.bonus)
+      })
+
+      it(`should set stage rate`, async function () {
+        expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(stageData.rate)
       })
 
       context('for not whitelisted', async function () {
@@ -124,8 +135,8 @@ describe('UltiCrowdsale', () => {
       context(`for whitelisted on ${FIRST_HUNDRED_WHITELIST}`, async function () {
         describe('accepting payments', function () {
           const purchaseValue = utils.parseEther('3')
-          const purchaseTokenAmount = purchaseValue.mul(firstHundred.rate)
-          const purchaseBonus = purchaseTokenAmount.mul(firstHundred.bonus).div(100)
+          const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
+          const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
           const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
           beforeEach(async function () {
