@@ -2,7 +2,7 @@ import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
 import { UltiCrowdsale__factory, UltiCoin__factory, UltiCrowdsale } from '../typechain'
 import { solidity } from 'ethereum-waffle'
-import { utils } from 'ethers'
+import { BigNumber, utils } from 'ethers'
 import {
   stagesData,
   MAXIMAL_CONTRIBUTION,
@@ -28,6 +28,23 @@ describe('UltiCrowdsale time dependent', () => {
   let tokenFactory: UltiCoin__factory
   let crowdsaleFactory: UltiCrowdsale__factory
 
+  const purchaseValues = [
+    utils.parseEther('0.01'),
+    utils.parseEther('0.1'),
+    utils.parseEther('0.25'),
+    utils.parseEther('0.5'),
+    utils.parseEther('1.5431655'),
+    utils.parseEther('3'),
+    utils.parseEther('5'),
+    utils.parseEther('10'),
+  ]
+
+  let privateSalePurchaseValues: BigNumber[] = []
+  purchaseValues.reduce((r, e) => {
+    if (e.gte(MINIMAL_CONTRIBUTION) && e.lte(MAXIMAL_CONTRIBUTION)) r.push(e)
+    return r
+  }, privateSalePurchaseValues)
+
   beforeEach(async () => {
     ;[admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
     tokenFactory = (await ethers.getContractFactory('UltiCoin')) as UltiCoin__factory
@@ -48,7 +65,7 @@ describe('UltiCrowdsale time dependent', () => {
 
     const privateSaleStages = [Stages.GuaranteedSpot, Stages.PrivateSale]
     privateSaleStages.forEach(function (stage) {
-      context(`and in ${Stages[stage]} stage`, async function () {
+      context(`in ${Stages[stage]} stage`, async function () {
         const stageData = stagesData[stage]
 
         beforeEach(async function () {
@@ -141,8 +158,7 @@ describe('UltiCrowdsale time dependent', () => {
         stageData.whitelists?.forEach(function (whitelist) {
           context(`for whitelisted on ${whitelist}`, async function () {
             describe('accepting payments', function () {
-              const purchaseValue = utils.parseEther('3')
-              const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
+              const purchaseTokenAmount = value.mul(stageData.rate)
               const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
               const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
@@ -178,26 +194,37 @@ describe('UltiCrowdsale time dependent', () => {
 
                 it('should accept payments', async function () {
                   await expect(
-                    purchaser.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
+                    purchaser.sendTransaction({ to: this.crowdsale.address, value: value })
                   ).to.not.be.reverted
                 })
 
                 it('should log purchase', async function () {
-                  await expect(investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue }))
+                  await expect(investor.sendTransaction({ to: this.crowdsale.address, value: value }))
                     .to.emit(this.crowdsale, 'TokensPurchased')
-                    .withArgs(investor.address, investor.address, purchaseValue, expectedTokenAmount)
+                    .withArgs(investor.address, investor.address, value, expectedTokenAmount)
                 })
+                privateSalePurchaseValues.forEach(function (purchaseValue) {
+                  context(`value of ${utils.formatEther(purchaseValue).toString()} BNB`, async function () {
+                    const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
+                    const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
+                    const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
-                it('should assign tokens to sender', async function () {
-                  await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
-                  expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
-                })
+                    it(`should assign ${utils
+                      .formatEther(expectedTokenAmount)
+                      .toString()} tokens to beneficiary`, async function () {
+                      await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
+                      expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
+                    })
 
-                it('should forward funds to wallet', async function () {
-                  const startBalance = await wallet.getBalance()
-                  await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
-                  const endBalance = await wallet.getBalance()
-                  expect(endBalance).to.be.eq(startBalance.add(purchaseValue))
+                    it(`should forward ${utils
+                      .formatEther(purchaseValue)
+                      .toString()} BNB to wallet`, async function () {
+                      const startBalance = await wallet.getBalance()
+                      await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
+                      const endBalance = await wallet.getBalance()
+                      expect(endBalance).to.be.eq(startBalance.add(purchaseValue))
+                    })
+                  })
                 })
               })
 
@@ -210,7 +237,7 @@ describe('UltiCrowdsale time dependent', () => {
 
                 it('requires a non-null beneficiary', async function () {
                   await expect(
-                    this.crowdsale.connect(purchaser).buyTokens(ZERO_ADDRESS, { value: purchaseValue })
+                    this.crowdsale.connect(purchaser).buyTokens(ZERO_ADDRESS, { value: value })
                   ).to.be.revertedWith('Crowdsale: beneficiary is the zero address')
                 })
 
@@ -239,26 +266,37 @@ describe('UltiCrowdsale time dependent', () => {
 
                 it('should accept payments', async function () {
                   await expect(
-                    this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                    this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
                   ).to.not.be.reverted
                 })
 
                 it('should log purchase', async function () {
-                  await expect(this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue }))
+                  await expect(this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value }))
                     .to.emit(this.crowdsale, 'TokensPurchased')
-                    .withArgs(purchaser.address, investor.address, purchaseValue, expectedTokenAmount)
+                    .withArgs(purchaser.address, investor.address, value, expectedTokenAmount)
                 })
+                privateSalePurchaseValues.forEach(function (purchaseValue) {
+                  context(`value of ${utils.formatEther(purchaseValue).toString()} BNB`, async function () {
+                    const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
+                    const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
+                    const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
-                it('should assign tokens to beneficiary', async function () {
-                  await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
-                  expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
-                })
+                    it(`should assign ${utils
+                      .formatEther(expectedTokenAmount)
+                      .toString()} tokens to beneficiary`, async function () {
+                      await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                      expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
+                    })
 
-                it('should forward funds to wallet', async function () {
-                  const startBalance = await wallet.getBalance()
-                  await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
-                  const endBalance = await wallet.getBalance()
-                  expect(endBalance).to.be.eq(startBalance.add(purchaseValue))
+                    it(`should forward ${utils
+                      .formatEther(purchaseValue)
+                      .toString()} BNB to wallet`, async function () {
+                      const startBalance = await wallet.getBalance()
+                      await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                      const endBalance = await wallet.getBalance()
+                      expect(endBalance).to.be.eq(startBalance.add(purchaseValue))
+                    })
+                  })
                 })
               })
             })
@@ -269,7 +307,7 @@ describe('UltiCrowdsale time dependent', () => {
 
     const preSaleStages = [Stages.Presale1, Stages.Presale2, Stages.Presale3, Stages.Presale4, Stages.Presale5]
     preSaleStages.forEach(function (stage) {
-      context(`and in ${Stages[stage]} stage`, async function () {
+      context(`in ${Stages[stage]} stage`, async function () {
         const stageData = stagesData[stage]
 
         beforeEach(async function () {
@@ -301,45 +339,41 @@ describe('UltiCrowdsale time dependent', () => {
           })
 
           describe('accepting payments', function () {
-            const purchaseValues = [
-              MINIMAL_CONTRIBUTION.div(2),
-              MINIMAL_CONTRIBUTION,
-              utils.parseEther('3'),
-              MAXIMAL_CONTRIBUTION,
-              MAXIMAL_CONTRIBUTION.mul(2),
-            ]
-
             describe('bare payments', function () {
+              const purchaseTokenAmount = value.mul(stageData.rate)
+              const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
+              const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
+
               it('reverts on zero-valued payments', async function () {
                 await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: 0 })).to.be.revertedWith(
                   'Crowdsale: weiAmount is 0'
                 )
               })
 
+              it('should accept payments', async function () {
+                await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: value })).to.not.be.reverted
+              })
+
+              it('should log purchase', async function () {
+                await expect(investor.sendTransaction({ to: this.crowdsale.address, value: value }))
+                  .to.emit(this.crowdsale, 'TokensPurchased')
+                  .withArgs(investor.address, investor.address, value, expectedTokenAmount)
+              })
+
               purchaseValues.forEach(function (purchaseValue) {
-                context(`of ${purchaseValue.toString()} value`, async function () {
+                context(`value of ${utils.formatEther(purchaseValue).toString()} BNB`, async function () {
                   const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
                   const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
                   const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
-                  it('should accept payments', async function () {
-                    await expect(
-                      purchaser.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
-                    ).to.not.be.reverted
-                  })
-
-                  it('should log purchase', async function () {
-                    await expect(investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue }))
-                      .to.emit(this.crowdsale, 'TokensPurchased')
-                      .withArgs(investor.address, investor.address, purchaseValue, expectedTokenAmount)
-                  })
-
-                  it('should assign tokens to sender', async function () {
+                  it(`should assign ${utils
+                    .formatEther(expectedTokenAmount)
+                    .toString()} tokens to beneficiary`, async function () {
                     await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
                     expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
                   })
 
-                  it('should forward funds to wallet', async function () {
+                  it(`should forward ${utils.formatEther(purchaseValue).toString()} BNB to wallet`, async function () {
                     const startBalance = await wallet.getBalance()
                     await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
                     const endBalance = await wallet.getBalance()
@@ -350,6 +384,10 @@ describe('UltiCrowdsale time dependent', () => {
             })
 
             describe('buyTokens', function () {
+              const purchaseTokenAmount = value.mul(stageData.rate)
+              const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
+              const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
+
               it('reverts on zero-valued payments', async function () {
                 await expect(
                   this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: 0 })
@@ -362,32 +400,32 @@ describe('UltiCrowdsale time dependent', () => {
                 ).to.be.revertedWith('Crowdsale: beneficiary is the zero address')
               })
 
+              it('should accept payments', async function () {
+                await expect(
+                  this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
+                ).to.not.be.reverted
+              })
+
+              it('should log purchase', async function () {
+                await expect(this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value }))
+                  .to.emit(this.crowdsale, 'TokensPurchased')
+                  .withArgs(purchaser.address, investor.address, value, expectedTokenAmount)
+              })
+
               purchaseValues.forEach(function (purchaseValue) {
-                context(`of ${purchaseValue.toString()} value`, async function () {
+                context(`value of ${utils.formatEther(purchaseValue).toString()} BNB`, async function () {
                   const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
                   const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
                   const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
-                  it('should accept payments', async function () {
-                    await expect(
-                      this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
-                    ).to.not.be.reverted
-                  })
-
-                  it('should log purchase', async function () {
-                    await expect(
-                      this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
-                    )
-                      .to.emit(this.crowdsale, 'TokensPurchased')
-                      .withArgs(purchaser.address, investor.address, purchaseValue, expectedTokenAmount)
-                  })
-
-                  it('should assign tokens to beneficiary', async function () {
+                  it(`should assign ${utils
+                    .formatEther(expectedTokenAmount)
+                    .toString()} tokens to beneficiary`, async function () {
                     await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
                     expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
                   })
 
-                  it('should forward funds to wallet', async function () {
+                  it(`should forward ${utils.formatEther(purchaseValue).toString()} BNB to wallet`, async function () {
                     const startBalance = await wallet.getBalance()
                     await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
                     const endBalance = await wallet.getBalance()

@@ -9,6 +9,10 @@ export function toWei(num: BigNumberish): BigNumberish {
   return BigNumber.from(num).mul(BigNumber.from(10).pow(BigNumber.from(18)))
 }
 
+export function toEther(num: BigNumberish): BigNumberish {
+  return BigNumber.from(num).div(BigNumber.from(10).pow(BigNumber.from(18)))
+}
+
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 /* UltiCoin consts */
