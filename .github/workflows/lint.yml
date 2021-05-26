@@ -1,4 +1,4 @@
-name: tests
+name: lint
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
       - ci/github-workflow
 
 jobs:
-  tests:
-    name: Tests
+  lint:
+    name: Linter
     runs-on: ubuntu-latest
 
     steps:
@@ -29,9 +29,5 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # This is required separately from yarn test because it generates the typechain definitions
-      - name: Compile
-        run: yarn compile
-
-      - name: Run unit tests
-        run: yarn test
+      - name: Lint
+        run: yarn lint
