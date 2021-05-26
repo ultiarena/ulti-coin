@@ -1,9 +1,19 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCrowdsale__factory, UltiCoin__factory } from '../typechain'
+import { UltiCrowdsale__factory, UltiCoin__factory, UltiCrowdsale } from '../typechain'
 import { solidity } from 'ethereum-waffle'
-import { utils } from 'ethers'
-import { FIRST_HUNDRED_WHITELIST, firstHundred, OPENING_TIME, Stages, TOKEN_SUPPLY, ZERO_ADDRESS } from './common'
+import { BigNumberish, utils } from 'ethers'
+import {
+  FIRST_HUNDRED_WHITELIST,
+  firstHundred,
+  MAXIMAL_CONTRIBUTION,
+  MINIMAL_CONTRIBUTION,
+  OPENING_TIME,
+  PRIVATE_SALE_WHITELIST,
+  Stages,
+  TOKEN_SUPPLY,
+  ZERO_ADDRESS,
+} from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 use(solidity)
@@ -45,6 +55,21 @@ describe('UltiCrowdsale', () => {
       })
 
       context('for not whitelisted', async function () {
+        beforeEach(async function () {
+          await expect(
+            await this.crowdsale.connect(admin).isWhitelisted(FIRST_HUNDRED_WHITELIST, purchaser.address)
+          ).to.be.false
+          await expect(
+            await this.crowdsale.connect(admin).isWhitelisted(FIRST_HUNDRED_WHITELIST, investor.address)
+          ).to.be.false
+        })
+
+        it('reverts on tokens withdrawal', async function () {
+          await expect(this.crowdsale.connect(purchaser).withdrawTokens(investor.address)).to.be.revertedWith(
+            'PostDeliveryCrowdsale: not closed'
+          )
+        })
+
         describe('accepting payments', function () {
           it('reverts on positive payments', async function () {
             await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: value })).to.be.revertedWith(
@@ -57,16 +82,46 @@ describe('UltiCrowdsale', () => {
               this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
             ).to.be.revertedWith('UltiCrowdsale: caller is not on FirstHundred whitelist')
           })
+        })
+      })
 
-          it('reverts on tokens withdrawal', async function () {
-            await expect(this.crowdsale.connect(purchaser).withdrawTokens(investor.address)).to.be.revertedWith(
-              'PostDeliveryCrowdsale: not closed'
+      context(`for whitelisted on ${PRIVATE_SALE_WHITELIST}`, async function () {
+        beforeEach(async function () {
+          await this.crowdsale
+            .connect(admin)
+            .bulkAddToWhitelist(PRIVATE_SALE_WHITELIST, [purchaser.address, investor.address])
+
+          await expect(
+            await this.crowdsale.connect(admin).isWhitelisted(PRIVATE_SALE_WHITELIST, investor.address)
+          ).to.be.true
+
+          await expect(
+            await this.crowdsale.connect(admin).isWhitelisted(FIRST_HUNDRED_WHITELIST, investor.address)
+          ).to.be.false
+        })
+
+        it('reverts on tokens withdrawal', async function () {
+          await expect(this.crowdsale.connect(purchaser).withdrawTokens(investor.address)).to.be.revertedWith(
+            'PostDeliveryCrowdsale: not closed'
+          )
+        })
+
+        describe('accepting payments', function () {
+          it('reverts on positive payments', async function () {
+            await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: value })).to.be.revertedWith(
+              'UltiCrowdsale: caller is not on FirstHundred whitelist'
             )
+          })
+
+          it('reverts on tokens purchase', async function () {
+            await expect(
+              this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
+            ).to.be.revertedWith('UltiCrowdsale: caller is not on FirstHundred whitelist')
           })
         })
       })
 
-      context('for whitelisted', async function () {
+      context(`for whitelisted on ${FIRST_HUNDRED_WHITELIST}`, async function () {
         describe('accepting payments', function () {
           const purchaseValue = utils.parseEther('3')
           const purchaseTokenAmount = purchaseValue.mul(firstHundred.rate)
@@ -80,40 +135,30 @@ describe('UltiCrowdsale', () => {
           })
 
           describe('bare payments', function () {
+            it('reverts on zero-valued payments', async function () {
+              await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: 0 })).to.be.revertedWith(
+                'Crowdsale: weiAmount is 0'
+              )
+            })
+
+            it('reverts when not reaching MINIMAL_CONTRIBUTION payments', async function () {
+              await expect(
+                purchaser.sendTransaction({ to: this.crowdsale.address, value: MINIMAL_CONTRIBUTION.sub(1) })
+              ).to.be.revertedWith('UltiCrowdsale: value sent is too low or too high')
+            })
+
+            it('reverts when exceeding MAXIMAL_CONTRIBUTION payments', async function () {
+              await expect(
+                purchaser.sendTransaction({ to: this.crowdsale.address, value: MAXIMAL_CONTRIBUTION.add(1) })
+              ).to.be.revertedWith('UltiCrowdsale: value sent is too low or too high')
+            })
+
             it('should accept payments', async function () {
               await expect(
                 purchaser.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
               ).to.not.be.reverted
             })
 
-            it('reverts on zero-valued payments', async function () {
-              await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: 0 })).to.be.revertedWith(
-                'Crowdsale: weiAmount is 0'
-              )
-            })
-          })
-
-          describe('buyTokens', function () {
-            it('should accept payments', async function () {
-              await expect(
-                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
-              ).to.not.be.reverted
-            })
-
-            it('reverts on zero-valued payments', async function () {
-              await expect(
-                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: 0 })
-              ).to.be.revertedWith('Crowdsale: weiAmount is 0')
-            })
-
-            it('requires a non-null beneficiary', async function () {
-              await expect(
-                this.crowdsale.connect(purchaser).buyTokens(ZERO_ADDRESS, { value: purchaseValue })
-              ).to.be.revertedWith('Crowdsale: beneficiary is the zero address')
-            })
-          })
-
-          describe('high-level purchase', function () {
             it('should log purchase', async function () {
               await expect(investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue }))
                 .to.emit(this.crowdsale, 'TokensPurchased')
@@ -133,7 +178,37 @@ describe('UltiCrowdsale', () => {
             })
           })
 
-          describe('low-level purchase', function () {
+          describe('buyTokens', function () {
+            it('reverts on zero-valued payments', async function () {
+              await expect(
+                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: 0 })
+              ).to.be.revertedWith('Crowdsale: weiAmount is 0')
+            })
+
+            it('requires a non-null beneficiary', async function () {
+              await expect(
+                this.crowdsale.connect(purchaser).buyTokens(ZERO_ADDRESS, { value: purchaseValue })
+              ).to.be.revertedWith('Crowdsale: beneficiary is the zero address')
+            })
+
+            it('reverts when not reaching MINIMAL_CONTRIBUTION payments', async function () {
+              await expect(
+                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MINIMAL_CONTRIBUTION.sub(1) })
+              ).to.be.revertedWith('UltiCrowdsale: value sent is too low or too high')
+            })
+
+            it('reverts when exceeding MAXIMAL_CONTRIBUTION payments', async function () {
+              await expect(
+                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: MAXIMAL_CONTRIBUTION.add(1) })
+              ).to.be.revertedWith('UltiCrowdsale: value sent is too low or too high')
+            })
+
+            it('should accept payments', async function () {
+              await expect(
+                this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+              ).to.not.be.reverted
+            })
+
             it('should log purchase', async function () {
               await expect(this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue }))
                 .to.emit(this.crowdsale, 'TokensPurchased')

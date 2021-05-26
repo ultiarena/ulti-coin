@@ -94,10 +94,9 @@ describe('UltiCrowdsale time dependent', () => {
 
           it('adds address to whitelist', async function () {
             await this.crowdsale.connect(admin).addToWhitelist(FIRST_HUNDRED_WHITELIST, investor.address)
-            const isWhitelisted = await this.crowdsale
-              .connect(admin)
-              .isWhitelisted(FIRST_HUNDRED_WHITELIST, investor.address)
-            await expect(isWhitelisted).to.be.true
+            await expect(
+              await this.crowdsale.connect(admin).isWhitelisted(FIRST_HUNDRED_WHITELIST, investor.address)
+            ).to.be.true
           })
 
           it('should log whitelisting', async function () {
@@ -126,8 +125,7 @@ describe('UltiCrowdsale time dependent', () => {
           it('adds addresses to whitelist', async function () {
             await this.crowdsale.connect(admin).bulkAddToWhitelist(FIRST_HUNDRED_WHITELIST, addresses)
             for (let address of addresses) {
-              const isWhitelisted = await this.crowdsale.isWhitelisted(FIRST_HUNDRED_WHITELIST, address)
-              await expect(isWhitelisted).to.be.true
+              await expect(await this.crowdsale.isWhitelisted(FIRST_HUNDRED_WHITELIST, address)).to.be.true
             }
           })
         })
@@ -147,10 +145,9 @@ describe('UltiCrowdsale time dependent', () => {
 
           it('removes address from whitelist', async function () {
             await this.crowdsale.connect(admin).removeFromWhitelist(FIRST_HUNDRED_WHITELIST, investor.address)
-            const isWhitelisted = await this.crowdsale
-              .connect(admin)
-              .isWhitelisted(FIRST_HUNDRED_WHITELIST, investor.address)
-            await expect(isWhitelisted).to.be.false
+            await expect(
+              await this.crowdsale.connect(admin).isWhitelisted(FIRST_HUNDRED_WHITELIST, investor.address)
+            ).to.be.false
           })
 
           it('should log removing from whitelist', async function () {
