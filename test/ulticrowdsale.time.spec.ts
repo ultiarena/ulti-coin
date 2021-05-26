@@ -46,9 +46,8 @@ describe('UltiCrowdsale time dependent', () => {
       await ethers.provider.send('evm_mine', [])
     })
 
-    const whitelistStages = [Stages.FirstHundred, Stages.PrivateSale]
-
-    whitelistStages.forEach(function (stage) {
+    const privateSaleStages = [Stages.GuaranteedSpot, Stages.PrivateSale]
+    privateSaleStages.forEach(function (stage) {
       context(`and in ${Stages[stage]} stage`, async function () {
         const stageData = stagesData[stage]
 

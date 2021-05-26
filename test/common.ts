@@ -19,7 +19,7 @@ const TOKEN_SUPPLY = toWei(BigNumber.from(40000000000))
 
 enum Stages {
   Inactive,
-  FirstHundred,
+  GuaranteedSpot,
   PrivateSale,
   Presale1,
   Presale2,
@@ -30,7 +30,7 @@ enum Stages {
 
 const OPENING_TIME = 1623427200
 const CLOSING_TIME = 1630771200
-const FIRST_HUNDRED_WHITELIST = 'FIRST_HUNDRED_WHITELIST'
+const GUARANTEED_SPOT_WHITELIST = 'GUARANTEED_SPOT_WHITELIST'
 const PRIVATE_SALE_WHITELIST = 'PRIVATE_SALE_WHITELIST'
 
 const MINIMAL_CONTRIBUTION = utils.parseEther('0.5')
@@ -60,7 +60,7 @@ const stagesData: StageData[] = [
     bonus: 30,
     cap: utils.parseEther('2500'),
     startCap: 0,
-    whitelists: [FIRST_HUNDRED_WHITELIST],
+    whitelists: [GUARANTEED_SPOT_WHITELIST],
     wrongWhitelist: PRIVATE_SALE_WHITELIST,
   },
   {
@@ -69,7 +69,7 @@ const stagesData: StageData[] = [
     bonus: 30,
     cap: utils.parseEther('2500'),
     startCap: 0,
-    whitelists: [FIRST_HUNDRED_WHITELIST, PRIVATE_SALE_WHITELIST],
+    whitelists: [GUARANTEED_SPOT_WHITELIST, PRIVATE_SALE_WHITELIST],
   },
 ]
 
@@ -79,7 +79,7 @@ export {
   Stages,
   OPENING_TIME,
   CLOSING_TIME,
-  FIRST_HUNDRED_WHITELIST,
+  GUARANTEED_SPOT_WHITELIST,
   PRIVATE_SALE_WHITELIST,
   TOKEN_SUPPLY,
   MINIMAL_CONTRIBUTION,

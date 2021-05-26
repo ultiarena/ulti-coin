@@ -9,7 +9,7 @@ import './crowdsale/WhitelistAccess.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 
 contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, WhitelistAccess {
-    enum CrowdsaleStage {Inactive, FirstHundred, PrivateSale, Presale1, Presale2, Presale3, Presale4, Presale5}
+    enum CrowdsaleStage {Inactive, GuaranteedSpot, PrivateSale, Presale1, Presale2, Presale3, Presale4, Presale5}
 
     struct CrowdsaleStageData {
         uint256 closingTime;
@@ -25,7 +25,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
     uint256 OPENING_TIME = 1623427200; // 11-06-2021 16:00 UTC
     uint256 CLOSING_TIME = 1630771200; // 04-09-2021 16:00 UTC
 
-    bytes32 public constant FIRST_HUNDRED_WHITELIST = keccak256('FIRST_HUNDRED_WHITELIST');
+    bytes32 public constant GUARANTEED_SPOT_WHITELIST = keccak256('GUARANTEED_SPOT_WHITELIST');
     bytes32 public constant PRIVATE_SALE_WHITELIST = keccak256('PRIVATE_SALE_WHITELIST');
 
     uint256 MINIMAL_CONTRIBUTION = 5 * 1e17; // 0.5 BNB
@@ -41,7 +41,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
 
         _setupCrowdsaleStage(CrowdsaleStage.Inactive, 0, 0, 0, 0, 0);
         // closing: 12-06-2021 16:00 UTC, rate: 1 / 0.00000019 BNB, bonus: 30%, cap: 2500 BNB, startCap: 0
-        _setupCrowdsaleStage(CrowdsaleStage.FirstHundred, 1623513600, 5263157, 30, 2500 * 1e18, 0);
+        _setupCrowdsaleStage(CrowdsaleStage.GuaranteedSpot, 1623513600, 5263157, 30, 2500 * 1e18, 0);
         // closing: 26-06-2021 16:00 UTC, rate: 1 / 0.00000019 BNB, bonus: 30%, cap: 2500 BNB, startCap: 0
         _setupCrowdsaleStage(CrowdsaleStage.PrivateSale, 1624723200, 5263157, 30, 2500 * 1e18, 0);
         // closing: 10-07-2021 16:00 UTC, rate: 1 / 0.00000045 BNB, bonus: 10%, cap: 3500 BNB, startCap: 2500 BNB
@@ -100,7 +100,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         Crowdsale._preValidatePurchase(beneficiary, weiAmount);
 
         CrowdsaleStage stage_ = _currentStage();
-        if (stage_ == CrowdsaleStage.FirstHundred || stage_ == CrowdsaleStage.PrivateSale) {
+        if (stage_ == CrowdsaleStage.GuaranteedSpot || stage_ == CrowdsaleStage.PrivateSale) {
             require(weiAmount >= MINIMAL_CONTRIBUTION, 'UltiCrowdsale: value sent is lower than minimal contribution');
             require(weiAmount <= MAXIMAL_CONTRIBUTION, 'UltiCrowdsale: value sent is higher than maximal contribution');
             require(
@@ -108,14 +108,14 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
                 'UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit'
             );
 
-            bool isFirstHundredWhitelisted = _isWhitelisted(FIRST_HUNDRED_WHITELIST, beneficiary);
+            bool isGuaranteedSpotWhitelisted = _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary);
             bool isPrivateSaleWhitelisted = _isWhitelisted(PRIVATE_SALE_WHITELIST, beneficiary);
 
-            if (stage_ == CrowdsaleStage.FirstHundred) {
-                require(isFirstHundredWhitelisted, 'UltiCrowdsale: beneficiary is not on whitelist');
+            if (stage_ == CrowdsaleStage.GuaranteedSpot) {
+                require(isGuaranteedSpotWhitelisted, 'UltiCrowdsale: beneficiary is not on whitelist');
             } else {
                 require(
-                    isFirstHundredWhitelisted || isPrivateSaleWhitelisted,
+                    isGuaranteedSpotWhitelisted || isPrivateSaleWhitelisted,
                     'UltiCrowdsale: beneficiary is not on whitelist'
                 );
             }
@@ -163,10 +163,10 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
             return CrowdsaleStage.Presale2;
         } else if (lastBlockTimestamp > _stages[CrowdsaleStage.PrivateSale].closingTime) {
             return CrowdsaleStage.Presale1;
-        } else if (lastBlockTimestamp > _stages[CrowdsaleStage.FirstHundred].closingTime) {
+        } else if (lastBlockTimestamp > _stages[CrowdsaleStage.GuaranteedSpot].closingTime) {
             return CrowdsaleStage.PrivateSale;
         } else {
-            return CrowdsaleStage.FirstHundred;
+            return CrowdsaleStage.GuaranteedSpot;
         }
     }
 
