@@ -37,7 +37,7 @@ describe('Crowdsale', () => {
   context('with token', async function () {
     beforeEach(async function () {
       this.token = await tokenFactory.connect(wallet).deploy()
-      expect(await this.token.balanceOf(wallet.address)).to.equal(INITIAL_SUPPLY)
+      expect(await this.token.balanceOf(wallet.address)).to.equal(MAX_SUPPLY)
     })
 
     it('requires a non-zero rate', async function () {
@@ -55,8 +55,9 @@ describe('Crowdsale', () => {
     context('once deployed', async function () {
       beforeEach(async function () {
         this.crowdsale = await crowdsaleFactory.connect(wallet).deploy(rate, wallet.address, this.token.address)
+        await this.token.excludeFromFee(this.crowdsale.address)
         await this.token.transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
-        expect(await this.token.totalSupply()).to.equal(INITIAL_SUPPLY)
+        expect(await this.token.totalSupply()).to.equal(MAX_SUPPLY)
       })
 
       describe('accepting payments', function () {

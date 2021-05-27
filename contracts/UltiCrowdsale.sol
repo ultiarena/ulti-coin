@@ -23,13 +23,12 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
     mapping(CrowdsaleStage => CrowdsaleStageData) private _stages;
 
     uint256 OPENING_TIME = 1623427200; // 11-06-2021 16:00 UTC
-    uint256 CLOSING_TIME = 1630771200; // 04-09-2021 16:00 UTC
+    uint256 CLOSING_TIME = 1631451600; // 12-09-2021 13:00 UTC
 
     bytes32 public constant GUARANTEED_SPOT_WHITELIST = keccak256('GUARANTEED_SPOT_WHITELIST');
     bytes32 public constant PRIVATE_SALE_WHITELIST = keccak256('PRIVATE_SALE_WHITELIST');
 
     uint256 MIN_PRIVATE_SALE_CONTRIBUTION = 5 * 1e17; // 0.5 BNB
-
     uint256 MAX_PRIVATE_SALE_CONTRIBUTION = 5 * 1e18; // 5 BNB
 
     uint256 HARD_CAP = 50000 * 1e18; // 50000 BNB
@@ -41,20 +40,20 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         _setupCrowdsaleStage(CrowdsaleStage.Inactive, 0, 0, 0, 0, 0);
-        // closing: 12-06-2021 16:00 UTC, rate: 1 / 0.00000019 BNB, bonus: 30%, cap: 2500 BNB, startCap: 0
+        // closing: 12-06-2021 16:00 UTC, price: 0.00000019 BNB, bonus: 30%, cap: 2500 BNB
         _setupCrowdsaleStage(CrowdsaleStage.GuaranteedSpot, 1623513600, 5263157, 30, 2500 * 1e18, 0);
-        // closing: 26-06-2021 16:00 UTC, rate: 1 / 0.00000019 BNB, bonus: 30%, cap: 2500 BNB, startCap: 0
+        // closing: 26-06-2021 16:00 UTC, price: 0.00000019 BNB, bonus: 30%, cap: 2500 BNB
         _setupCrowdsaleStage(CrowdsaleStage.PrivateSale, 1624723200, 5263157, 30, 2500 * 1e18, 0);
-        // closing: 10-07-2021 16:00 UTC, rate: 1 / 0.00000045 BNB, bonus: 10%, cap: 3500 BNB, startCap: 2500 BNB
+        // closing: 10-07-2021 16:00 UTC, price: 0.00000045 BNB, bonus: 10%, cap: 3500 BNB
         _setupCrowdsaleStage(CrowdsaleStage.Presale1, 1625932800, 2222222, 10, 3500 * 1e18, 2500 * 1e18);
-        // closing: 24-07-2021 16:00 UTC, rate: 1 / 0.00000071 BNB, bonus: 5%, cap: 6000 BNB, startCap: 6000 BNB
+        // closing: 24-07-2021 16:00 UTC, price: 0.00000071 BNB, bonus: 5%, cap: 6000 BNB
         _setupCrowdsaleStage(CrowdsaleStage.Presale2, 1627142400, 1408450, 5, 6000 * 1e18, 6000 * 1e18);
-        // closing: 07-08-2021 16:00 UTC, rate: 1 / 0.00000097 BNB, bonus: 3%, cap: 9000 BNB, startCap: 12000 BNB
+        // closing: 07-08-2021 16:00 UTC, price: 0.00000097 BNB, bonus: 3%, cap: 9000 BNB
         _setupCrowdsaleStage(CrowdsaleStage.Presale3, 1628352000, 1030927, 3, 9000 * 1e18, 12000 * 1e18);
-        // closing: 21-08-2021 16:00 UTC, rate: 1 / 0.00000125 BNB, bonus: 0%, cap: 12500 BNB, startCap: 21000 BNB
+        // closing: 21-08-2021 16:00 UTC, price: 0.00000125 BNB, bonus: 0%, cap: 12500 BNB
         _setupCrowdsaleStage(CrowdsaleStage.Presale4, 1629561600, 800000, 0, 12500 * 1e18, 21000 * 1e18);
-        // closing: 04-09-2021 16:00 UTC, rate: 1 / 0.00000150 BNB, bonus: 0%, cap: 16500 BNB, startCap: 33500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale5, 1630771200, 666666, 0, 16500 * 1e18, 33500 * 1e18);
+        // closing: 12-09-2021 13:00 UTC, price: 0.00000150 BNB, bonus: 0%, cap: 16500 BNB
+        _setupCrowdsaleStage(CrowdsaleStage.Presale5, 1631451600, 666666, 0, 16500 * 1e18, 33500 * 1e18);
     }
 
     modifier onlyWhileHardcapNotReached() {

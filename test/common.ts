@@ -21,6 +21,10 @@ const MAX_SUPPLY = toWei(BigNumber.from(250000000000))
 const INITIAL_SUPPLY = toWei(BigNumber.from(160620000000))
 const CROWDSALE_SUPPLY = toWei(BigNumber.from(59370000000))
 
+const NAME = 'UltiCoin'
+const SYMBOL = 'ULTI'
+const DECIMALS = 18
+
 /* Crowdsale consts */
 
 enum Stages {
@@ -35,7 +39,7 @@ enum Stages {
 }
 
 const OPENING_TIME = 1623427200
-const CLOSING_TIME = 1630771200
+const CLOSING_TIME = 1631451600
 const GUARANTEED_SPOT_WHITELIST = 'GUARANTEED_SPOT_WHITELIST'
 const PRIVATE_SALE_WHITELIST = 'PRIVATE_SALE_WHITELIST'
 
@@ -106,7 +110,7 @@ const stagesData: StageData[] = [
     startCap: utils.parseEther('21000'),
   },
   {
-    closeTimestamp: 1630771200,
+    closeTimestamp: 1631451600,
     rate: 666666,
     bonus: 0,
     cap: utils.parseEther('16500'),
@@ -127,4 +131,7 @@ export {
   CROWDSALE_SUPPLY,
   MINIMAL_CONTRIBUTION,
   MAXIMAL_CONTRIBUTION,
+  NAME,
+  SYMBOL,
+  DECIMALS,
 }
