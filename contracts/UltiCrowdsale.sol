@@ -28,8 +28,9 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
     bytes32 public constant GUARANTEED_SPOT_WHITELIST = keccak256('GUARANTEED_SPOT_WHITELIST');
     bytes32 public constant PRIVATE_SALE_WHITELIST = keccak256('PRIVATE_SALE_WHITELIST');
 
-    uint256 MINIMAL_CONTRIBUTION = 5 * 1e17; // 0.5 BNB
-    uint256 MAXIMAL_CONTRIBUTION = 5 * 1e18; // 5 BNB
+    uint256 MIN_PRIVATE_SALE_CONTRIBUTION = 5 * 1e17; // 0.5 BNB
+
+    uint256 MAX_PRIVATE_SALE_CONTRIBUTION = 5 * 1e18; // 5 BNB
 
     uint256 HARD_CAP = 50000 * 1e18; // 50000 BNB
 
@@ -101,10 +102,16 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
 
         CrowdsaleStage stage_ = _currentStage();
         if (stage_ == CrowdsaleStage.GuaranteedSpot || stage_ == CrowdsaleStage.PrivateSale) {
-            require(weiAmount >= MINIMAL_CONTRIBUTION, 'UltiCrowdsale: value sent is lower than minimal contribution');
-            require(weiAmount <= MAXIMAL_CONTRIBUTION, 'UltiCrowdsale: value sent is higher than maximal contribution');
             require(
-                balanceOf(beneficiary) + weiAmount <= MAXIMAL_CONTRIBUTION,
+                weiAmount >= MIN_PRIVATE_SALE_CONTRIBUTION,
+                'UltiCrowdsale: value sent is lower than minimal contribution'
+            );
+            require(
+                weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
+                'UltiCrowdsale: value sent is higher than maximal contribution'
+            );
+            require(
+                balanceOf(beneficiary) + weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
                 'UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit'
             );
 

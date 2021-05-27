@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import './TimedCrowdsale.sol';
-import './TokenVault.sol';
 
 /**
  * @title PostDeliveryCrowdsale
@@ -12,11 +11,6 @@ import './TokenVault.sol';
  */
 abstract contract PostDeliveryCrowdsale is TimedCrowdsale {
     mapping(address => uint256) private _balances;
-    TokenVault private _vault;
-
-    constructor() {
-        _vault = new TokenVault();
-    }
 
     /**
      * @dev Withdraw tokens only after crowdsale ends.
@@ -28,7 +22,7 @@ abstract contract PostDeliveryCrowdsale is TimedCrowdsale {
         require(amount > 0, 'PostDeliveryCrowdsale: beneficiary is not due any tokens');
 
         _balances[beneficiary] = 0;
-        _vault.transfer(token(), beneficiary, amount);
+        _deliverTokens(beneficiary, amount);
     }
 
     /**
@@ -47,6 +41,5 @@ abstract contract PostDeliveryCrowdsale is TimedCrowdsale {
      */
     function _processPurchase(address beneficiary, uint256 tokenAmount) internal virtual override {
         _balances[beneficiary] = _balances[beneficiary] + tokenAmount;
-        _deliverTokens(address(_vault), tokenAmount);
     }
 }
