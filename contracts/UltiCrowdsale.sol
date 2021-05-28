@@ -33,7 +33,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
 
     uint256 HARD_CAP = 50000 * 1e18; // 50000 BNB
 
-    constructor(address payable wallet_, IERC20 token_)
+    constructor(address payable wallet_, IERC20Burnable token_)
         Crowdsale(1, wallet_, token_)
         TimedCrowdsale(OPENING_TIME, CLOSING_TIME)
     {
@@ -87,6 +87,15 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
 
     function hardcapReached() public view returns (bool) {
         return weiRaised() >= HARD_CAP;
+    }
+
+    function burnNotSold() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(hasClosed(), 'UltiCrowdsale: crowdsale not closed');
+        uint256 crowdsaleBalance = token().balanceOf(address(this));
+        uint256 _tokensSold = tokensSold();
+        require(crowdsaleBalance > _tokensSold, 'UltiCrowdsale: all tokens were sold');
+        uint256 tokensNotSold = crowdsaleBalance - _tokensSold;
+        token().burn(tokensNotSold);
     }
 
     function _preValidatePurchase(address beneficiary, uint256 weiAmount)

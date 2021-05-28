@@ -132,11 +132,40 @@ describe('UltiCrowdsale', () => {
 
     context('withdrawal', async function () {
       describe('withdrawTokens', async function () {
+        it(`reverts when beneficiary has no tokens`, async function () {
+          await expect(this.crowdsale.withdrawTokens(purchaser.address)).to.be.revertedWith(
+            'PostDeliveryCrowdsale: beneficiary is not due any tokens'
+          )
+        })
+
         it(`should transfer ${utils
           .formatEther(expectedTokenAmount)
           .toString()} tokens to beneficiary`, async function () {
           await this.crowdsale.withdrawTokens(investor.address)
           expect(await this.token.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
+        })
+      })
+    })
+
+    context('burning', async function () {
+      describe('burnNotSold', async function () {
+        it(`reverts when called not by owner all`, async function () {
+          await expect(this.crowdsale.connect(wallet).burnNotSold()).to.be.reverted
+        })
+
+        it(`should burn all unsold crowdsale tokens`, async function () {
+          const tokensSold = await this.crowdsale.tokensSold()
+          expect(await this.token.balanceOf(this.crowdsale.address)).to.be.gt(tokensSold)
+          await this.crowdsale.connect(admin).burnNotSold()
+          expect(await this.token.balanceOf(this.crowdsale.address)).to.be.equal(tokensSold)
+        })
+
+        it(`should not change others balances`, async function () {
+          await this.crowdsale.withdrawTokens(investor.address)
+          const investorBalance = await this.token.balanceOf(investor.address)
+          expect(investorBalance).to.be.gt(0)
+          await this.crowdsale.connect(admin).burnNotSold()
+          expect(await this.token.balanceOf(investor.address)).to.be.equal(investorBalance)
         })
       })
     })

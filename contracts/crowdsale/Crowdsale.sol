@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: GPLv3
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/utils/Context.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
+import './IERC20Burnable.sol';
 
 /**
  * @title Crowdsale
@@ -20,10 +20,10 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
  * behavior.
  */
 contract Crowdsale is Context, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Burnable;
 
     // The token being sold
-    IERC20 private _token;
+    IERC20Burnable private _token;
 
     // Address where funds are collected
     address payable private _wallet;
@@ -57,7 +57,7 @@ contract Crowdsale is Context, ReentrancyGuard {
     constructor(
         uint256 rate_,
         address payable wallet_,
-        IERC20 token_
+        IERC20Burnable token_
     ) {
         require(rate_ > 0, 'Crowdsale: rate is 0');
         require(wallet_ != address(0), 'Crowdsale: wallet is the zero address');
@@ -78,7 +78,7 @@ contract Crowdsale is Context, ReentrancyGuard {
     /**
      * @return the token being sold.
      */
-    function token() public view returns (IERC20) {
+    function token() public view returns (IERC20Burnable) {
         return _token;
     }
 

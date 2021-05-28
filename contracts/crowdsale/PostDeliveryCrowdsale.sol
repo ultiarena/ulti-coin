@@ -12,6 +12,9 @@ import './TimedCrowdsale.sol';
 abstract contract PostDeliveryCrowdsale is TimedCrowdsale {
     mapping(address => uint256) private _balances;
 
+    // Number of tokens sold
+    uint256 private _tokensSold;
+
     /**
      * @dev Withdraw tokens only after crowdsale ends.
      * @param beneficiary Whose tokens will be withdrawn.
@@ -33,6 +36,13 @@ abstract contract PostDeliveryCrowdsale is TimedCrowdsale {
     }
 
     /**
+     * @return the number of tokens sold.
+     */
+    function tokensSold() public view returns (uint256) {
+        return _tokensSold;
+    }
+
+    /**
      * @dev Overrides parent by storing due balances, and delivering tokens to the vault instead of the end user. This
      * ensures that the tokens will be available by the time they are withdrawn (which may not be the case if
      * `_deliverTokens` was called later).
@@ -41,5 +51,6 @@ abstract contract PostDeliveryCrowdsale is TimedCrowdsale {
      */
     function _processPurchase(address beneficiary, uint256 tokenAmount) internal virtual override {
         _balances[beneficiary] = _balances[beneficiary] + tokenAmount;
+        _tokensSold = _tokensSold += tokenAmount;
     }
 }
