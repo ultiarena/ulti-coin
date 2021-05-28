@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 
 import './crowdsale/Crowdsale.sol';
 import './crowdsale/TimedCrowdsale.sol';
-import './crowdsale/PostDeliveryCrowdsale.sol';
+import './crowdsale/PostDeliveryVestingCrowdsale.sol';
 import './crowdsale/WhitelistAccess.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 
-contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, WhitelistAccess {
+contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryVestingCrowdsale, WhitelistAccess {
     enum CrowdsaleStage {Inactive, GuaranteedSpot, PrivateSale, Presale1, Presale2, Presale3, Presale4, Presale5}
 
     struct CrowdsaleStageData {
@@ -22,20 +22,31 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
 
     mapping(CrowdsaleStage => CrowdsaleStageData) private _stages;
 
-    uint256 OPENING_TIME = 1623427200; // 11-06-2021 16:00 UTC
-    uint256 CLOSING_TIME = 1631451600; // 12-09-2021 13:00 UTC
+    uint256 public constant OPENING_TIME = 1623427200; // 11-06-2021 16:00 UTC
+    uint256 public constant CLOSING_TIME = 1631451600; // 12-09-2021 13:00 UTC
 
     bytes32 public constant GUARANTEED_SPOT_WHITELIST = keccak256('GUARANTEED_SPOT_WHITELIST');
     bytes32 public constant PRIVATE_SALE_WHITELIST = keccak256('PRIVATE_SALE_WHITELIST');
 
-    uint256 MIN_PRIVATE_SALE_CONTRIBUTION = 5 * 1e17; // 0.5 BNB
-    uint256 MAX_PRIVATE_SALE_CONTRIBUTION = 5 * 1e18; // 5 BNB
+    uint256 public constant MIN_PRIVATE_SALE_CONTRIBUTION = 5 * 1e17; // 0.5 BNB
+    uint256 public constant MAX_PRIVATE_SALE_CONTRIBUTION = 5 * 1e18; // 5 BNB
 
-    uint256 HARD_CAP = 50000 * 1e18; // 50000 BNB
+    uint256 public constant HARD_CAP = 50000 * 1e18; // 50000 BNB
+
+    uint256 public constant VESTING_START_OFFSET = 864000; // 10 days
+    uint256 public constant VESTING_CLIFF_DURATION = 864000; // 10 days
+    uint256 public constant VESTING_DURATION = 8640000; // 100 days
+    uint256 public constant VESTING_INITIAL_PERCENT = 10; // 10 %
 
     constructor(address payable wallet_, IERC20Burnable token_)
         Crowdsale(1, wallet_, token_)
         TimedCrowdsale(OPENING_TIME, CLOSING_TIME)
+        PostDeliveryVestingCrowdsale(
+            VESTING_START_OFFSET,
+            VESTING_CLIFF_DURATION,
+            VESTING_DURATION,
+            VESTING_INITIAL_PERCENT
+        )
     {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
@@ -119,7 +130,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
                 'UltiCrowdsale: value sent is higher than maximal contribution'
             );
             require(
-                balanceOf(beneficiary) + weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
+                tokensBought(beneficiary) + weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
                 'UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit'
             );
 
@@ -145,9 +156,9 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
 
     function _processPurchase(address beneficiary, uint256 tokenAmount)
         internal
-        override(Crowdsale, PostDeliveryCrowdsale)
+        override(Crowdsale, PostDeliveryVestingCrowdsale)
     {
-        PostDeliveryCrowdsale._processPurchase(beneficiary, tokenAmount);
+        PostDeliveryVestingCrowdsale._processPurchase(beneficiary, tokenAmount);
     }
 
     function _updatePurchasingState(
@@ -155,10 +166,6 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryCrowdsale, Whit
         uint256 weiAmount
     ) internal override(Crowdsale) {
         _stages[_currentStage()].weiRaised = _stages[_currentStage()].weiRaised + weiAmount;
-    }
-
-    function _postValidatePurchase(address beneficiary, uint256 weiAmount) internal view override(Crowdsale) {
-        // solhint-disable-previous-line no-empty-blocks
     }
 
     function _currentStage() public view returns (CrowdsaleStage) {

@@ -46,6 +46,11 @@ const PRIVATE_SALE_WHITELIST = 'PRIVATE_SALE_WHITELIST'
 const MINIMAL_CONTRIBUTION = utils.parseEther('0.5')
 const MAXIMAL_CONTRIBUTION = utils.parseEther('5')
 
+const VESTING_START_OFFSET = 864000 // 10 days
+const VESTING_CLIFF_DURATION = 864000 // 10 days
+const VESTING_DURATION = 8640000 // 100 days
+const VESTING_INITIAL_PERCENT = 10
+
 type StageData = {
   closeTimestamp: BigNumberish
   rate: BigNumberish
@@ -134,4 +139,8 @@ export {
   NAME,
   SYMBOL,
   DECIMALS,
+  VESTING_DURATION,
+  VESTING_CLIFF_DURATION,
+  VESTING_INITIAL_PERCENT,
+  VESTING_START_OFFSET,
 }

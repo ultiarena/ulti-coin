@@ -12,6 +12,10 @@ import {
   CROWDSALE_SUPPLY,
   ZERO_ADDRESS,
   CLOSING_TIME,
+  VESTING_INITIAL_PERCENT,
+  VESTING_START_OFFSET,
+  VESTING_CLIFF_DURATION,
+  VESTING_DURATION,
 } from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
@@ -20,39 +24,22 @@ use(solidity)
 describe('UltiCrowdsale', () => {
   let admin: SignerWithAddress
   let investor: SignerWithAddress
+  let other_investor: SignerWithAddress
   let wallet: SignerWithAddress
   let purchaser: SignerWithAddress
   let addrs: SignerWithAddress[]
 
-  const value = utils.parseEther('1')
-
   let tokenFactory: UltiCoin__factory
   let crowdsaleFactory: UltiCrowdsale__factory
 
-  const purchaseValues = [
-    utils.parseEther('0.01'),
-    utils.parseEther('0.1'),
-    utils.parseEther('0.25'),
-    utils.parseEther('0.5'),
-    utils.parseEther('1.5431655'),
-    utils.parseEther('3'),
-    utils.parseEther('5'),
-    utils.parseEther('10'),
-  ]
-
-  let privateSalePurchaseValues: BigNumber[] = []
-  purchaseValues.reduce((r, e) => {
-    if (e.gte(MINIMAL_CONTRIBUTION) && e.lte(MAXIMAL_CONTRIBUTION)) r.push(e)
-    return r
-  }, privateSalePurchaseValues)
-
   beforeEach(async () => {
-    ;[admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
+    ;[admin, wallet, investor, other_investor, purchaser, ...addrs] = await ethers.getSigners()
     tokenFactory = (await ethers.getContractFactory('UltiCoin')) as UltiCoin__factory
     crowdsaleFactory = (await ethers.getContractFactory('UltiCrowdsale')) as UltiCrowdsale__factory
   })
 
   context('once deployed and closed', async function () {
+    const value = utils.parseEther('1')
     const stage = Stages.Presale1
     const stageData = stagesData[stage]
     const purchaseTokenAmount = value.mul(stageData.rate)
@@ -75,7 +62,10 @@ describe('UltiCrowdsale', () => {
       await ethers.provider.send('evm_mine', [])
 
       await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
-      expect(await this.crowdsale.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
+      expect(await this.crowdsale.tokensBought(investor.address)).to.be.equal(expectedTokenAmount)
+
+      await this.crowdsale.connect(purchaser).buyTokens(other_investor.address, { value: value.mul(3) })
+      expect(await this.crowdsale.tokensBought(other_investor.address)).to.be.equal(expectedTokenAmount.mul(3))
 
       await ethers.provider.send('evm_setNextBlockTimestamp', [Number(CLOSING_TIME) + Number(1)])
       await ethers.provider.send('evm_mine', [])
@@ -122,8 +112,8 @@ describe('UltiCrowdsale', () => {
       )
     })
 
-    it(`should return ${value} weiRaised`, async function () {
-      expect(await this.crowdsale.connect(purchaser).weiRaised()).to.be.equal(value)
+    it(`should return ${value.mul(4)} weiRaised`, async function () {
+      expect(await this.crowdsale.connect(purchaser).weiRaised()).to.be.equal(value.mul(4))
     })
 
     it(`should return that hardcap is not reached`, async function () {
@@ -131,25 +121,99 @@ describe('UltiCrowdsale', () => {
     })
 
     context('withdrawal', async function () {
-      describe('withdrawTokens', async function () {
+      describe('releaseTokens', async function () {
         it(`reverts when beneficiary has no tokens`, async function () {
-          await expect(this.crowdsale.withdrawTokens(purchaser.address)).to.be.revertedWith(
-            'PostDeliveryCrowdsale: beneficiary is not due any tokens'
+          await expect(this.crowdsale.releaseTokens(purchaser.address)).to.be.revertedWith(
+            'PostDeliveryVestingCrowdsale: beneficiary is not due any tokens'
           )
         })
 
-        it(`should transfer ${utils
-          .formatEther(expectedTokenAmount)
-          .toString()} tokens to beneficiary`, async function () {
-          await this.crowdsale.withdrawTokens(investor.address)
-          expect(await this.token.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
+        it(`reverts when beneficiary is ZERO_ADDRESS`, async function () {
+          await expect(this.crowdsale.releaseTokens(ZERO_ADDRESS)).to.be.revertedWith(
+            'PostDeliveryVestingCrowdsale: beneficiary is the zero address'
+          )
+        })
+
+        describe('before cliff', async function () {
+          it(`should transfer ${VESTING_INITIAL_PERCENT}% of ${utils.formatEther(expectedTokenAmount).toString()} tokens to beneficiary`, async function () {
+            await this.crowdsale.releaseTokens(investor.address)
+            const amount = expectedTokenAmount.mul(VESTING_INITIAL_PERCENT).div(100)
+            expect(await this.token.balanceOf(investor.address)).to.be.equal(amount)
+          })
+
+          it('reverts when transfer called again', async function () {
+            await this.crowdsale.releaseTokens(investor.address)
+            await expect(this.crowdsale.releaseTokens(investor.address)).to.be.revertedWith(
+              'PostDeliveryVestingCrowdsale: beneficiary tokens are vested'
+            )
+          })
+
+          it(`should not change others balances`, async function () {
+            await this.crowdsale.releaseTokens(other_investor.address)
+            const otherInvestorBalance = await this.token.balanceOf(other_investor.address)
+            expect(otherInvestorBalance).to.be.gt(0)
+            await this.crowdsale.releaseTokens(investor.address)
+            expect(await this.token.balanceOf(other_investor.address)).to.be.equal(otherInvestorBalance)
+          })
+        })
+        const daysAfterCliff = [10, 15, 25, 30, 43, 67, 89]
+        const dailyIncreasePercent = 1
+        const deltaLow = BigNumber.from(999999)
+        const deltaHigh = BigNumber.from(1000001)
+        const deltaDenominator = BigNumber.from(1000000)
+        daysAfterCliff.forEach(function (days) {
+          describe(`${days} days after cliff`, async function () {
+            const vestedPercentage = VESTING_INITIAL_PERCENT + days * dailyIncreasePercent
+            const amountToRelease = expectedTokenAmount.mul(vestedPercentage).div(100)
+
+            beforeEach(async function () {
+              const daysSeconds = days * 24 * 60 * 60
+              const newTimestamp = CLOSING_TIME + VESTING_START_OFFSET + VESTING_CLIFF_DURATION + daysSeconds
+              await ethers.provider.send('evm_setNextBlockTimestamp', [newTimestamp])
+              await ethers.provider.send('evm_mine', [])
+            })
+
+            it(`should transfer approximately ${utils
+              .formatEther(amountToRelease)
+              .toString()} (${vestedPercentage}%) of ${utils.formatEther(expectedTokenAmount).toString()} tokens to beneficiary`, async function () {
+              expect(await this.token.balanceOf(investor.address)).to.be.equal(0)
+              await this.crowdsale.releaseTokens(investor.address)
+              expect(await this.token.balanceOf(investor.address)).to.be.gte(
+                amountToRelease.mul(deltaLow).div(deltaDenominator)
+              )
+              expect(await this.token.balanceOf(investor.address)).to.be.lte(
+                amountToRelease.mul(deltaHigh).div(deltaDenominator)
+              )
+            })
+          })
+        })
+        describe('after vesting ends', async function () {
+          beforeEach(async function () {
+            const newTimestamp = CLOSING_TIME + VESTING_START_OFFSET + VESTING_DURATION + 1
+            await ethers.provider.send('evm_setNextBlockTimestamp', [newTimestamp])
+            await ethers.provider.send('evm_mine', [])
+          })
+
+          it(`should transfer 100% of ${utils
+            .formatEther(expectedTokenAmount)
+            .toString()} tokens to beneficiary`, async function () {
+            await this.crowdsale.releaseTokens(investor.address)
+            expect(await this.token.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
+          })
+
+          it('reverts when all tokens released', async function () {
+            await this.crowdsale.releaseTokens(investor.address)
+            await expect(this.crowdsale.releaseTokens(investor.address)).to.be.revertedWith(
+              'PostDeliveryVestingCrowdsale: beneficiary is not due any tokens'
+            )
+          })
         })
       })
     })
 
     context('burning', async function () {
       describe('burnNotSold', async function () {
-        it(`reverts when called not by owner all`, async function () {
+        it(`reverts when called not by owner`, async function () {
           await expect(this.crowdsale.connect(wallet).burnNotSold()).to.be.reverted
         })
 
@@ -161,7 +225,7 @@ describe('UltiCrowdsale', () => {
         })
 
         it(`should not change others balances`, async function () {
-          await this.crowdsale.withdrawTokens(investor.address)
+          await this.crowdsale.releaseTokens(investor.address)
           const investorBalance = await this.token.balanceOf(investor.address)
           expect(investorBalance).to.be.gt(0)
           await this.crowdsale.connect(admin).burnNotSold()
