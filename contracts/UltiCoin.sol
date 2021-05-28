@@ -30,12 +30,13 @@ contract UltiCoin is Context, IERC20, Ownable {
     address[] private _excluded;
 
     uint256 private constant MAX = ~uint256(0);
-    uint256 private constant _tTotal = 250000000000 * (10**18);
+    uint256 private _tTotal = 250 * 1e9 * 1e18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
+    uint256 private _tBurnTotal;
 
     uint256 private _tFeePercent = 2;
-    uint256 private _previousTaxFeePercent = _tFeePercent;
+    uint256 private _tBurnPercent = 2;
 
     string private _name = 'UltiCoin';
     string private _symbol = 'ULTI';
@@ -68,13 +69,12 @@ contract UltiCoin is Context, IERC20, Ownable {
         return _decimals;
     }
 
-    function totalSupply() public pure override returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _tTotal;
     }
 
     function balanceOf(address account) external view override returns (uint256) {
-        if (_isExcluded[account]) return _tOwned[account];
-        return tokenFromReflection(_rOwned[account]);
+        return _balanceOf(account);
     }
 
     function transfer(address recipient, uint256 amount) external override returns (bool) {
@@ -130,22 +130,37 @@ contract UltiCoin is Context, IERC20, Ownable {
         return _tFeeTotal;
     }
 
+    function totalBurned() public view returns (uint256) {
+        return _tBurnTotal;
+    }
+
     function reflect(uint256 tAmount) external {
         address sender = _msgSender();
         require(!_isExcluded[sender], 'Excluded addresses cannot call this function');
-        (uint256 rAmount, , , , ) = _getValues(tAmount);
+        require(_balanceOf(sender) >= tAmount, 'Reflect amount exceeds sender balance');
+        (uint256 rAmount, , , , , ) = _getValues(tAmount);
         _rOwned[sender] = _rOwned[sender] - rAmount;
-        _rTotal = _rTotal - rAmount;
-        _tFeeTotal = _tFeeTotal + tAmount;
+        _reflectFee(rAmount, 0, tAmount, 0);
+    }
+
+    function burn(uint256 amount) public {
+        _burn(_msgSender(), amount);
+    }
+
+    function burnFrom(address account, uint256 amount) public {
+        uint256 currentAllowance = _allowances[account][_msgSender()];
+        require(currentAllowance >= amount, 'ERC20: burn amount exceeds allowance');
+        _approve(account, _msgSender(), currentAllowance - amount);
+        _burn(account, amount);
     }
 
     function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns (uint256) {
         require(tAmount <= _tTotal, 'Amount must be less than supply');
         if (!deductTransferFee) {
-            (uint256 rAmount, , , , ) = _getValues(tAmount);
+            (uint256 rAmount, , , , , ) = _getValues(tAmount);
             return rAmount;
         } else {
-            (, uint256 rTransferAmount, , , ) = _getValues(tAmount);
+            (, uint256 rTransferAmount, , , , ) = _getValues(tAmount);
             return rTransferAmount;
         }
     }
@@ -191,6 +206,11 @@ contract UltiCoin is Context, IERC20, Ownable {
         emit IncludedInFee(account);
     }
 
+    function _balanceOf(address account) private view returns (uint256) {
+        if (_isExcluded[account]) return _tOwned[account];
+        return tokenFromReflection(_rOwned[account]);
+    }
+
     function _approve(
         address owner,
         address spender,
@@ -201,6 +221,16 @@ contract UltiCoin is Context, IERC20, Ownable {
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
+    }
+
+    function _burn(address account, uint256 tAmount) internal {
+        require(account != address(0), 'ERC20: burn from the zero address');
+        require(_balanceOf(account) >= tAmount, 'ERC20: burn amount exceeds balance');
+        (uint256 rAmount, , , , , ) = _getValues(tAmount);
+        _rOwned[account] = _rOwned[account] - rAmount;
+        _reflectFee(0, rAmount, 0, tAmount);
+
+        emit Transfer(account, address(0), tAmount);
     }
 
     function _transfer(
@@ -230,11 +260,12 @@ contract UltiCoin is Context, IERC20, Ownable {
         uint256 tAmount
     ) private {
         bool isExcludedFromFeeTx = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) =
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn) =
             _getValues(tAmount, isExcludedFromFeeTx);
+        uint256 rBurn = tBurn * _getRate();
         _rOwned[sender] = _rOwned[sender] - rAmount;
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
-        _reflectFee(rFee, tFee);
+        _reflectFee(rFee, rBurn, tFee, tBurn);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
@@ -244,12 +275,13 @@ contract UltiCoin is Context, IERC20, Ownable {
         uint256 tAmount
     ) private {
         bool isExcludedFromFeeTx = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) =
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn) =
             _getValues(tAmount, isExcludedFromFeeTx);
+        uint256 rBurn = tBurn * _getRate();
         _rOwned[sender] = _rOwned[sender] - rAmount;
         _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
-        _reflectFee(rFee, tFee);
+        _reflectFee(rFee, rBurn, tFee, tBurn);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
@@ -259,12 +291,13 @@ contract UltiCoin is Context, IERC20, Ownable {
         uint256 tAmount
     ) private {
         bool isExcludedFromFeeTx = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) =
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn) =
             _getValues(tAmount, isExcludedFromFeeTx);
+        uint256 rBurn = tBurn * _getRate();
         _tOwned[sender] = _tOwned[sender] - tAmount;
         _rOwned[sender] = _rOwned[sender] - rAmount;
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
-        _reflectFee(rFee, tFee);
+        _reflectFee(rFee, rBurn, tFee, tBurn);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
@@ -274,25 +307,34 @@ contract UltiCoin is Context, IERC20, Ownable {
         uint256 tAmount
     ) private {
         bool isExcludedFromFeeTx = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) =
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn) =
             _getValues(tAmount, isExcludedFromFeeTx);
+        uint256 rBurn = tBurn * _getRate();
         _tOwned[sender] = _tOwned[sender] - tAmount;
         _rOwned[sender] = _rOwned[sender] - rAmount;
         _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
-        _reflectFee(rFee, tFee);
+        _reflectFee(rFee, rBurn, tFee, tBurn);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
-    function _reflectFee(uint256 rFee, uint256 tFee) private {
-        _rTotal = _rTotal - rFee;
+    function _reflectFee(
+        uint256 rFee,
+        uint256 rBurn,
+        uint256 tFee,
+        uint256 tBurn
+    ) private {
+        _rTotal = _rTotal - rFee - rBurn;
+        _tBurnTotal = _tBurnTotal + tBurn;
         _tFeeTotal = _tFeeTotal + tFee;
+        _tTotal = _tTotal - tBurn;
     }
 
     function _getValues(uint256 tAmount)
         private
         view
         returns (
+            uint256,
             uint256,
             uint256,
             uint256,
@@ -311,27 +353,38 @@ contract UltiCoin is Context, IERC20, Ownable {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
-        (uint256 tTransferAmount, uint256 tFee) = _getTValues(tAmount, isExcludedFromFee_);
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, _getRate());
-        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
+        (uint256 tTransferAmount, uint256 tFee, uint256 tBurn) = _getTValues(tAmount, isExcludedFromFee_);
+        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, tBurn, _getRate());
+        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee, tBurn);
     }
 
-    function _getTValues(uint256 tAmount, bool isExcludedFromFee_) private view returns (uint256, uint256) {
+    function _getTValues(uint256 tAmount, bool isExcludedFromFee_)
+        private
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         if (isExcludedFromFee_) {
-            return (tAmount, 0);
+            return (tAmount, 0, 0);
         }
 
         uint256 tFee = (tAmount * _tFeePercent) / 100;
-        uint256 tTransferAmount = tAmount - tFee;
-        return (tTransferAmount, tFee);
+        uint256 tBurn = (tAmount * _tBurnPercent) / 100;
+        uint256 tTransferAmount = tAmount - tFee - tBurn;
+        return (tTransferAmount, tFee, tBurn);
     }
 
     function _getRValues(
         uint256 tAmount,
         uint256 tFee,
+        uint256 tBurn,
         uint256 currentRate
     )
         private
@@ -344,7 +397,8 @@ contract UltiCoin is Context, IERC20, Ownable {
     {
         uint256 rAmount = tAmount * currentRate;
         uint256 rFee = tFee * currentRate;
-        uint256 rTransferAmount = rAmount - rFee;
+        uint256 rBurn = tBurn * currentRate;
+        uint256 rTransferAmount = rAmount - rFee - rBurn;
         return (rAmount, rTransferAmount, rFee);
     }
 
@@ -364,11 +418,5 @@ contract UltiCoin is Context, IERC20, Ownable {
         }
         if (rSupply < _rTotal / _tTotal) return (_rTotal, _tTotal);
         return (rSupply, tSupply);
-    }
-
-    function setFeePercent(uint256 fee) external onlyOwner {
-        require(fee >= 1, 'Fee is too small');
-        require(fee <= 10, 'Fee is too big');
-        _tFeePercent = fee;
     }
 }
