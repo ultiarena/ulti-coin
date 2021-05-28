@@ -11,6 +11,7 @@ import {
   Stages,
   CROWDSALE_SUPPLY,
   ZERO_ADDRESS,
+  CLOSING_TIME,
 } from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
@@ -85,6 +86,12 @@ describe('UltiCrowdsale time dependent', () => {
 
         it(`should set stage rate`, async function () {
           expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(stageData.rate)
+        })
+
+        it(`should set stage cap`, async function () {
+          expect(await this.crowdsale.connect(purchaser).cap()).to.be.equal(
+            BigNumber.from(stageData.cap).add(stageData.startCap)
+          )
         })
 
         context('for not whitelisted', async function () {
@@ -327,6 +334,12 @@ describe('UltiCrowdsale time dependent', () => {
 
         it(`should set stage rate`, async function () {
           expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(stageData.rate)
+        })
+
+        it(`should set stage cap`, async function () {
+          expect(await this.crowdsale.connect(purchaser).cap()).to.be.equal(
+            BigNumber.from(stageData.cap).add(stageData.startCap)
+          )
         })
 
         context('for anyone', async function () {

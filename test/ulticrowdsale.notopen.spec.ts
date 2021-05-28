@@ -3,7 +3,15 @@ import { ethers } from 'hardhat'
 import { UltiCrowdsale__factory, UltiCoin__factory } from '../typechain'
 import { solidity } from 'ethereum-waffle'
 import { utils } from 'ethers'
-import { GUARANTEED_SPOT_WHITELIST, Stages, CROWDSALE_SUPPLY, ZERO_ADDRESS, INITIAL_SUPPLY, MAX_SUPPLY } from './common'
+import {
+  GUARANTEED_SPOT_WHITELIST,
+  Stages,
+  CROWDSALE_SUPPLY,
+  ZERO_ADDRESS,
+  INITIAL_SUPPLY,
+  MAX_SUPPLY,
+  CLOSING_TIME,
+} from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { keccak256 } from 'ethers/lib/utils'
 
@@ -20,6 +28,10 @@ describe('UltiCrowdsale', () => {
 
   let tokenFactory: UltiCoin__factory
   let crowdsaleFactory: UltiCrowdsale__factory
+
+  before(async () => {
+    await ethers.provider.send('hardhat_reset', [])
+  })
 
   beforeEach(async () => {
     ;[admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
@@ -48,7 +60,7 @@ describe('UltiCrowdsale', () => {
       )
     })
 
-    context('once deployed and not open', async function () {
+    context('once deployed and not yet open', async function () {
       beforeEach(async function () {
         this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
         await this.token.transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
@@ -71,6 +83,12 @@ describe('UltiCrowdsale', () => {
         await expect(
           this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
         ).to.be.revertedWith('TimedCrowdsale: not open')
+      })
+
+      it('reverts on tokens withdrawal', async function () {
+        await expect(this.crowdsale.connect(purchaser).withdrawTokens(investor.address)).to.be.revertedWith(
+          'PostDeliveryCrowdsale: not closed'
+        )
       })
 
       it('is in Inactive stage', async function () {
