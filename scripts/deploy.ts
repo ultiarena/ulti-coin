@@ -1,11 +1,17 @@
 import { ethers } from 'hardhat'
 
 async function main() {
-  // We get the contract to deploy
-  const factory = await ethers.getContractFactory('UltiCoin')
-  const token = await factory.deploy()
+  const tokenFactory = await ethers.getContractFactory('UltiCoin')
+  const token = await tokenFactory.deploy()
 
   console.log('UltiCoin deployed to:', token.address)
+
+  const wallet = '0x'
+
+  const crowdsaleFactory = await ethers.getContractFactory('UltiCrowdsale')
+  const crowdsale = await crowdsaleFactory.deploy(wallet, token.address)
+
+  console.log('UltiCrowdsale deployed to:', crowdsale.address)
 }
 
 main()
