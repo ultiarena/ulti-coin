@@ -17,6 +17,8 @@ abstract contract PostDeliveryVestingCrowdsale is TimedCrowdsale {
     // Number of tokens sold
     uint256 private _tokensSold;
 
+    uint256 private _tokensReleased;
+
     uint256 private _cliff;
     uint256 private _start;
     uint256 private _duration;
@@ -51,6 +53,10 @@ abstract contract PostDeliveryVestingCrowdsale is TimedCrowdsale {
         return _start + _duration;
     }
 
+    function isVestingEnded() public view returns (bool) {
+        return block.timestamp >= vestingEnd();
+    }
+
     /**
      * @return the balance of an account.
      */
@@ -63,6 +69,10 @@ abstract contract PostDeliveryVestingCrowdsale is TimedCrowdsale {
      */
     function tokensSold() public view returns (uint256) {
         return _tokensSold;
+    }
+
+    function tokensReleased() public view returns (uint256) {
+        return _tokensReleased;
     }
 
     function releasableAmount(address beneficiary) public view returns (uint256) {
@@ -83,6 +93,7 @@ abstract contract PostDeliveryVestingCrowdsale is TimedCrowdsale {
         uint256 amount = releasableAmount(beneficiary);
         require(amount > 0, 'PostDeliveryVestingCrowdsale: beneficiary tokens are vested');
         _released[beneficiary] = _released[beneficiary] + amount;
+        _tokensReleased += amount;
         _deliverTokens(beneficiary, amount);
     }
 
@@ -90,7 +101,7 @@ abstract contract PostDeliveryVestingCrowdsale is TimedCrowdsale {
         uint256 lastBlockTimestamp = block.timestamp;
         if (block.timestamp < _cliff) {
             return (_balances[beneficiary] * _initialPercent) / 100;
-        } else if (lastBlockTimestamp >= _start + _duration) {
+        } else if (lastBlockTimestamp >= vestingEnd()) {
             return _balances[beneficiary];
         } else {
             return (_balances[beneficiary] * (lastBlockTimestamp - _start)) / _duration;

@@ -53,6 +53,7 @@ describe('UltiCrowdsale', () => {
       this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
       await this.token.transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
       await this.token.connect(wallet).excludeFromFee(this.crowdsale.address)
+      await this.token.connect(wallet).excludeAccount(this.crowdsale.address)
 
       await ethers.provider.send('evm_setNextBlockTimestamp', [OPENING_TIME])
       await ethers.provider.send('evm_mine', [])
@@ -120,7 +121,7 @@ describe('UltiCrowdsale', () => {
       expect(await this.crowdsale.connect(purchaser).hardcapReached()).to.be.false
     })
 
-    context('withdrawal', async function () {
+    context('release', async function () {
       describe('releaseTokens', async function () {
         it(`reverts when beneficiary has no tokens`, async function () {
           await expect(this.crowdsale.releaseTokens(purchaser.address)).to.be.revertedWith(
@@ -192,6 +193,10 @@ describe('UltiCrowdsale', () => {
             const newTimestamp = CLOSING_TIME + VESTING_START_OFFSET + VESTING_DURATION + 1
             await ethers.provider.send('evm_setNextBlockTimestamp', [newTimestamp])
             await ethers.provider.send('evm_mine', [])
+          })
+
+          it('should return that vesting is ended', async function () {
+            expect(await this.crowdsale.isVestingEnded()).to.be.true
           })
 
           it(`should transfer 100% of ${utils
