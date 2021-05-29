@@ -228,6 +228,9 @@ contract UltiCoin is Context, IERC20, Ownable {
         require(_balanceOf(account) >= tAmount, 'ERC20: burn amount exceeds balance');
         (uint256 rAmount, , , , , ) = _getValues(tAmount);
         _rOwned[account] = _rOwned[account] - rAmount;
+        if (_isExcluded[account]) {
+            _tOwned[account] = _tOwned[account] - tAmount;
+        }
         _reflectFee(0, rAmount, 0, tAmount);
 
         emit Transfer(account, address(0), tAmount);
