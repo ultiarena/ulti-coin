@@ -87,7 +87,7 @@ describe('UltiCrowdsale', () => {
 
       it('reverts on tokens withdrawal', async function () {
         await expect(this.crowdsale.connect(purchaser).releaseTokens(investor.address)).to.be.revertedWith(
-          'PostDeliveryVestingCrowdsale: not closed'
+          'PostVestingCrowdsale: not closed'
         )
       })
 

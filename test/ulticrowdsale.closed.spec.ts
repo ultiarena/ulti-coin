@@ -125,13 +125,13 @@ describe('UltiCrowdsale', () => {
       describe('releaseTokens', async function () {
         it(`reverts when beneficiary has no tokens`, async function () {
           await expect(this.crowdsale.releaseTokens(purchaser.address)).to.be.revertedWith(
-            'PostDeliveryVestingCrowdsale: beneficiary is not due any tokens'
+            'PostVestingCrowdsale: beneficiary is not due any tokens'
           )
         })
 
         it(`reverts when beneficiary is ZERO_ADDRESS`, async function () {
           await expect(this.crowdsale.releaseTokens(ZERO_ADDRESS)).to.be.revertedWith(
-            'PostDeliveryVestingCrowdsale: beneficiary is the zero address'
+            'PostVestingCrowdsale: beneficiary is the zero address'
           )
         })
 
@@ -145,7 +145,7 @@ describe('UltiCrowdsale', () => {
           it('reverts when transfer called again', async function () {
             await this.crowdsale.releaseTokens(investor.address)
             await expect(this.crowdsale.releaseTokens(investor.address)).to.be.revertedWith(
-              'PostDeliveryVestingCrowdsale: beneficiary tokens are vested'
+              'PostVestingCrowdsale: beneficiary tokens are vested'
             )
           })
 
@@ -209,7 +209,7 @@ describe('UltiCrowdsale', () => {
           it('reverts when all tokens released', async function () {
             await this.crowdsale.releaseTokens(investor.address)
             await expect(this.crowdsale.releaseTokens(investor.address)).to.be.revertedWith(
-              'PostDeliveryVestingCrowdsale: beneficiary is not due any tokens'
+              'PostVestingCrowdsale: beneficiary is not due any tokens'
             )
           })
         })

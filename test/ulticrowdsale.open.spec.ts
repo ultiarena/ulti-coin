@@ -106,7 +106,7 @@ describe('UltiCrowdsale time dependent', () => {
 
           it('reverts on tokens release', async function () {
             await expect(this.crowdsale.connect(purchaser).releaseTokens(investor.address)).to.be.revertedWith(
-              'PostDeliveryVestingCrowdsale: not closed'
+              'PostVestingCrowdsale: not closed'
             )
           })
 
@@ -143,7 +143,7 @@ describe('UltiCrowdsale time dependent', () => {
 
             it('reverts on tokens release', async function () {
               await expect(this.crowdsale.connect(purchaser).releaseTokens(investor.address)).to.be.revertedWith(
-                'PostDeliveryVestingCrowdsale: not closed'
+                'PostVestingCrowdsale: not closed'
               )
             })
 
@@ -347,7 +347,7 @@ describe('UltiCrowdsale time dependent', () => {
 
           it('reverts on tokens release', async function () {
             await expect(this.crowdsale.connect(purchaser).releaseTokens(investor.address)).to.be.revertedWith(
-              'PostDeliveryVestingCrowdsale: not closed'
+              'PostVestingCrowdsale: not closed'
             )
           })
 

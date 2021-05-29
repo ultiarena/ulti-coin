@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 
 import './crowdsale/Crowdsale.sol';
 import './crowdsale/TimedCrowdsale.sol';
-import './crowdsale/PostDeliveryVestingCrowdsale.sol';
+import './crowdsale/PostVestingCrowdsale.sol';
 import './crowdsale/WhitelistAccess.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 
-contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryVestingCrowdsale, WhitelistAccess {
+contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, WhitelistAccess {
     enum CrowdsaleStage {Inactive, GuaranteedSpot, PrivateSale, Presale1, Presale2, Presale3, Presale4, Presale5}
 
     struct CrowdsaleStageData {
@@ -41,12 +41,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryVestingCrowdsal
     constructor(address payable wallet_, IERC20Burnable token_)
         Crowdsale(1, wallet_, token_)
         TimedCrowdsale(OPENING_TIME, CLOSING_TIME)
-        PostDeliveryVestingCrowdsale(
-            VESTING_START_OFFSET,
-            VESTING_CLIFF_DURATION,
-            VESTING_DURATION,
-            VESTING_INITIAL_PERCENT
-        )
+        PostVestingCrowdsale(VESTING_START_OFFSET, VESTING_CLIFF_DURATION, VESTING_DURATION, VESTING_INITIAL_PERCENT)
     {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
@@ -156,9 +151,9 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostDeliveryVestingCrowdsal
 
     function _processPurchase(address beneficiary, uint256 tokenAmount)
         internal
-        override(Crowdsale, PostDeliveryVestingCrowdsale)
+        override(Crowdsale, PostVestingCrowdsale)
     {
-        PostDeliveryVestingCrowdsale._processPurchase(beneficiary, tokenAmount);
+        PostVestingCrowdsale._processPurchase(beneficiary, tokenAmount);
     }
 
     function _updatePurchasingState(

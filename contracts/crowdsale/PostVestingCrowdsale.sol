@@ -2,14 +2,13 @@
 
 pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import './TimedCrowdsale.sol';
 
 /**
- * @title PostDeliveryVestingCrowdsale
- * @dev Crowdsale that locks tokens from withdrawal until it ends.
+ * @title PostVestingCrowdsale
+ * @dev Crowdsale that start tokens vesting after the sale.
  */
-abstract contract PostDeliveryVestingCrowdsale is TimedCrowdsale {
+abstract contract PostVestingCrowdsale is TimedCrowdsale {
     mapping(address => uint256) private _balances;
 
     mapping(address => uint256) private _released;
@@ -30,11 +29,8 @@ abstract contract PostDeliveryVestingCrowdsale is TimedCrowdsale {
         uint256 duration_,
         uint256 initialPercent_
     ) {
-        require(
-            cliffDuration_ <= duration_,
-            'PostDeliveryVestingCrowdsale: Cliff has to be lower or equal to duration'
-        );
-        require(initialPercent_ <= 100, 'PostDeliveryVestingCrowdsale: Initial percent has to be lower than 100%');
+        require(cliffDuration_ <= duration_, 'PostVestingCrowdsale: Cliff has to be lower or equal to duration');
+        require(initialPercent_ <= 100, 'PostVestingCrowdsale: Initial percent has to be lower than 100%');
         _start = closingTime() + startOffset_;
         _cliff = _start + cliffDuration_;
         _duration = duration_;
@@ -84,14 +80,14 @@ abstract contract PostDeliveryVestingCrowdsale is TimedCrowdsale {
      * @param beneficiary Whose tokens will be withdrawn.
      */
     function releaseTokens(address beneficiary) public {
-        require(beneficiary != address(0), 'PostDeliveryVestingCrowdsale: beneficiary is the zero address');
-        require(hasClosed(), 'PostDeliveryVestingCrowdsale: not closed');
+        require(beneficiary != address(0), 'PostVestingCrowdsale: beneficiary is the zero address');
+        require(hasClosed(), 'PostVestingCrowdsale: not closed');
         require(
             _balances[beneficiary] - _released[beneficiary] > 0,
-            'PostDeliveryVestingCrowdsale: beneficiary is not due any tokens'
+            'PostVestingCrowdsale: beneficiary is not due any tokens'
         );
         uint256 amount = releasableAmount(beneficiary);
-        require(amount > 0, 'PostDeliveryVestingCrowdsale: beneficiary tokens are vested');
+        require(amount > 0, 'PostVestingCrowdsale: beneficiary tokens are vested');
         _released[beneficiary] = _released[beneficiary] + amount;
         _tokensReleased += amount;
         _deliverTokens(beneficiary, amount);
