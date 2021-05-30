@@ -95,13 +95,12 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         return weiRaised() >= HARD_CAP;
     }
 
-    function burnNotSold() public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function burn(uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
         require(hasClosed(), 'UltiCrowdsale: crowdsale not closed');
         uint256 crowdsaleBalance = token().balanceOf(address(this));
-        uint256 _tokensSold = tokensSold();
-        require(crowdsaleBalance > _tokensSold, 'UltiCrowdsale: all tokens were sold');
-        uint256 tokensNotSold = crowdsaleBalance - _tokensSold;
-        token().burn(tokensNotSold);
+        uint256 tokensToBeReleased = tokensSold() - tokensReleased();
+        require(crowdsaleBalance - amount >= tokensToBeReleased, 'UltiCrowdsale: unreleased tokens can not be burned');
+        token().burn(amount);
     }
 
     function _preValidatePurchase(address beneficiary, uint256 weiAmount)

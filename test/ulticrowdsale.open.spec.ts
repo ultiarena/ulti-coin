@@ -80,11 +80,11 @@ describe('UltiCrowdsale time dependent', () => {
           expect(stage).to.be.equal(stage.valueOf())
         })
 
-        it(`should set stage bonus`, async function () {
+        it(`should set ${stageData.bonus}% stage bonus`, async function () {
           expect(await this.crowdsale.connect(purchaser).bonus()).to.be.equal(stageData.bonus)
         })
 
-        it(`should set stage rate`, async function () {
+        it(`should set ${stageData.rate} stage rate`, async function () {
           expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(stageData.rate)
         })
 
@@ -216,6 +216,11 @@ describe('UltiCrowdsale time dependent', () => {
                     const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
                     const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
+                    it(`has  ${utils.formatEther(expectedTokenAmount).toString()} tokens sold`, async function () {
+                      await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                      expect(await this.crowdsale.tokensSold()).to.be.eq(expectedTokenAmount)
+                    })
+
                     it(`should assign ${utils
                       .formatEther(expectedTokenAmount)
                       .toString()} tokens to beneficiary`, async function () {
@@ -288,6 +293,11 @@ describe('UltiCrowdsale time dependent', () => {
                     const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
                     const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
+                    it(`has ${utils.formatEther(expectedTokenAmount).toString()} tokens sold`, async function () {
+                      await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                      expect(await this.crowdsale.tokensSold()).to.be.eq(expectedTokenAmount)
+                    })
+
                     it(`should assign ${utils
                       .formatEther(expectedTokenAmount)
                       .toString()} tokens to beneficiary`, async function () {
@@ -328,11 +338,11 @@ describe('UltiCrowdsale time dependent', () => {
           expect(stage).to.be.equal(stage.valueOf())
         })
 
-        it(`should set stage bonus`, async function () {
+        it(`should set ${stageData.bonus}% stage bonus`, async function () {
           expect(await this.crowdsale.connect(purchaser).bonus()).to.be.equal(stageData.bonus)
         })
 
-        it(`should set stage rate`, async function () {
+        it(`should set ${stageData.rate} stage rate`, async function () {
           expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(stageData.rate)
         })
 
@@ -378,6 +388,11 @@ describe('UltiCrowdsale time dependent', () => {
                   const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
                   const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
                   const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
+
+                  it(`should set  ${utils.formatEther(expectedTokenAmount).toString()} tokens sold`, async function () {
+                    await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                    expect(await this.crowdsale.tokensSold()).to.be.eq(expectedTokenAmount)
+                  })
 
                   it(`should assign ${utils
                     .formatEther(expectedTokenAmount)
@@ -430,6 +445,11 @@ describe('UltiCrowdsale time dependent', () => {
                   const purchaseTokenAmount = purchaseValue.mul(stageData.rate)
                   const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
                   const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
+
+                  it(`should set  ${utils.formatEther(expectedTokenAmount).toString()} tokens sold`, async function () {
+                    await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                    expect(await this.crowdsale.tokensSold()).to.be.eq(expectedTokenAmount)
+                  })
 
                   it(`should assign ${utils
                     .formatEther(expectedTokenAmount)

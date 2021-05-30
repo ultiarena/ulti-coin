@@ -73,7 +73,7 @@ describe('UltiCrowdsale', () => {
         )
       })
 
-      it('reverts on zero-valued payments', async function () {
+      it('reverts on ZERO payments', async function () {
         await expect(purchaser.sendTransaction({ to: this.crowdsale.address, value: 0 })).to.be.revertedWith(
           'TimedCrowdsale: not open'
         )
@@ -109,6 +109,14 @@ describe('UltiCrowdsale', () => {
 
       it('has not reached hardcap', async function () {
         expect(await this.crowdsale.connect(purchaser).hardcapReached()).to.be.false
+      })
+
+      it('has not ZERO tokens sold', async function () {
+        expect(await this.crowdsale.connect(purchaser).tokensSold()).to.be.equal(0)
+      })
+
+      it('has not ZERO tokens released', async function () {
+        expect(await this.crowdsale.connect(purchaser).tokensReleased()).to.be.equal(0)
       })
 
       context('whitelisting', async function () {
