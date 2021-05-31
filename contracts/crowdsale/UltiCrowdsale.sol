@@ -22,6 +22,8 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
 
     mapping(CrowdsaleStage => CrowdsaleStageData) private _stages;
 
+    mapping(address => uint256) private _weiContributed;
+
     uint256 public constant OPENING_TIME = 1623427200; // 11-06-2021 16:00 UTC
     uint256 public constant CLOSING_TIME = 1631451600; // 12-09-2021 13:00 UTC
 
@@ -120,11 +122,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
                 'UltiCrowdsale: value sent is lower than minimal contribution'
             );
             require(
-                weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
-                'UltiCrowdsale: value sent is higher than maximal contribution'
-            );
-            require(
-                tokensBought(beneficiary) + weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
+                _weiContributed[beneficiary] + weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
                 'UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit'
             );
 
@@ -155,11 +153,9 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         PostVestingCrowdsale._processPurchase(beneficiary, tokenAmount);
     }
 
-    function _updatePurchasingState(
-        address, /* beneficiary */
-        uint256 weiAmount
-    ) internal override(Crowdsale) {
+    function _updatePurchasingState(address beneficiary, uint256 weiAmount) internal override(Crowdsale) {
         _stages[_currentStage()].weiRaised = _stages[_currentStage()].weiRaised + weiAmount;
+        _weiContributed[beneficiary] = _weiContributed[beneficiary] + weiAmount;
     }
 
     function _currentStage() public view returns (CrowdsaleStage) {
