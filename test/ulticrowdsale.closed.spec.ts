@@ -49,7 +49,8 @@ describe('UltiCrowdsale', () => {
   async function proceedCrowdsale(crowdsale: UltiCrowdsale, token: UltiCoinUnswappable) {
     await token.connect(wallet).transfer(crowdsale.address, CROWDSALE_SUPPLY)
     await token.connect(wallet).excludeFromFee(crowdsale.address)
-    await token.connect(wallet).excludeAccount(crowdsale.address)
+    await token.connect(wallet).excludeFromReward(crowdsale.address)
+    expect(await token.isExcludedFromReward(crowdsale.address)).to.be.true
 
     await ethers.provider.send('evm_setNextBlockTimestamp', [OPENING_TIME])
     await ethers.provider.send('evm_mine', [])

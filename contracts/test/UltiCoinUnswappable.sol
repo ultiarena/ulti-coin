@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
+import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 /*
  *    |  \  |  \|  \      |        \|      \       /      \           |  \
@@ -18,6 +19,7 @@ import '@openzeppelin/contracts/utils/Address.sol';
 
 contract UltiCoinUnswappable is Context, IERC20, Ownable {
     using Address for address;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     string private constant _name = 'ULTI Coin';
     string private constant _symbol = 'ULTI';
@@ -28,8 +30,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     mapping(address => bool) private _isExcludedFromFee;
-    mapping(address => bool) private _isExcluded;
-    address[] private _excluded;
+    EnumerableSet.AddressSet private _excludedFromReward;
 
     uint256 private constant MAX = ~uint256(0);
     uint256 private _tTotal = 250 * 1e9 * (10**uint256(_decimals));
@@ -119,8 +120,8 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         return true;
     }
 
-    function isExcluded(address account) public view returns (bool) {
-        return _isExcluded[account];
+    function isExcludedFromReward(address account) public view returns (bool) {
+        return _excludedFromReward.contains(account);
     }
 
     function isExcludedFromFee(address account) public view returns (bool) {
@@ -137,7 +138,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
 
     function reflect(uint256 tAmount) external {
         address sender = _msgSender();
-        require(!_isExcluded[sender], 'Excluded addresses cannot call this function');
+        require(!isExcludedFromReward(sender), 'Excluded addresses cannot call this function');
         require(_balanceOf(sender) >= tAmount, 'Reflect amount exceeds sender balance');
 
         uint256 currentRate = _getRate();
@@ -173,28 +174,20 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         return rAmount / currentRate;
     }
 
-    function excludeAccount(address account) external onlyOwner() {
+    function excludeFromReward(address account) external onlyOwner() {
         // require(account != 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F, 'We can not exclude Pancake router.');
         require(account != address(this), 'Cannot exclude self contract');
-        require(!_isExcluded[account], 'Account is already excluded');
-        if (_rOwned[account] > 0) {
-            _tOwned[account] = tokenFromReflection(_rOwned[account]);
+        if (!_excludedFromReward.contains(account)) {
+            if (_rOwned[account] > 0) {
+                _tOwned[account] = tokenFromReflection(_rOwned[account]);
+            }
+            _excludedFromReward.add(account);
         }
-        _isExcluded[account] = true;
-        _excluded.push(account);
     }
 
-    function includeAccount(address account) external onlyOwner() {
-        require(_isExcluded[account], 'Account is already included');
-        uint256 length = _excluded.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (_excluded[i] == account) {
-                _excluded[i] = _excluded[_excluded.length - 1];
-                _tOwned[account] = 0;
-                _isExcluded[account] = false;
-                _excluded.pop();
-                break;
-            }
+    function includeInReward(address account) external onlyOwner() {
+        if (_excludedFromReward.remove(account)) {
+            _tOwned[account] = 0;
         }
     }
 
@@ -209,7 +202,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
     }
 
     function _balanceOf(address account) private view returns (uint256) {
-        if (_isExcluded[account]) return _tOwned[account];
+        if (isExcludedFromReward(account)) return _tOwned[account];
         return tokenFromReflection(_rOwned[account]);
     }
 
@@ -231,11 +224,10 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
 
         uint256 currentRate = _getRate();
         _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
-        if (_isExcluded[account]) {
+        if (isExcludedFromReward(account)) {
             _tOwned[account] = _tOwned[account] - tAmount;
         }
         _reflectFeeAndBurn(0, tAmount, currentRate);
-
         emit Transfer(account, address(0), tAmount);
     }
 
@@ -250,13 +242,13 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
 
         bool disableFee = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
 
-        if (_isExcluded[sender] && !_isExcluded[recipient]) {
+        if (isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
             _transferFromExcluded(sender, recipient, amount, disableFee);
-        } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
+        } else if (!isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
             _transferToExcluded(sender, recipient, amount, disableFee);
-        } else if (!_isExcluded[sender] && !_isExcluded[recipient]) {
+        } else if (!isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
             _transferStandard(sender, recipient, amount, disableFee);
-        } else if (_isExcluded[sender] && _isExcluded[recipient]) {
+        } else if (isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
             _transferBothExcluded(sender, recipient, amount, disableFee);
         } else {
             _transferStandard(sender, recipient, amount, disableFee);
@@ -349,7 +341,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
 
     function _takeLiquidity(uint256 tLiquidity, uint256 currentRate) private {
         _rOwned[address(this)] = _rOwned[address(this)] + (tLiquidity * currentRate);
-        if (_isExcluded[address(this)]) {
+        if (isExcludedFromReward(address(this))) {
             _tOwned[address(this)] = _tOwned[address(this)] + tLiquidity;
         }
     }
@@ -447,11 +439,11 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
     function _getCurrentSupply() private view returns (uint256, uint256) {
         uint256 rSupply = _rTotal;
         uint256 tSupply = _tTotal;
-        uint256 length = _excluded.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (_rOwned[_excluded[i]] > rSupply || _tOwned[_excluded[i]] > tSupply) return (_rTotal, _tTotal);
-            rSupply = rSupply - _rOwned[_excluded[i]];
-            tSupply = tSupply - _tOwned[_excluded[i]];
+        for (uint256 i = 0; i < _excludedFromReward.length(); i++) {
+            address excluded = _excludedFromReward.at(i);
+            if (_rOwned[excluded] > rSupply || _tOwned[excluded] > tSupply) return (_rTotal, _tTotal);
+            rSupply = rSupply - _rOwned[excluded];
+            tSupply = tSupply - _tOwned[excluded];
         }
         if (rSupply < _rTotal / _tTotal) return (_rTotal, _tTotal);
         return (rSupply, tSupply);
