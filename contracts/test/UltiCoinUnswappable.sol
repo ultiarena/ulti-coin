@@ -366,7 +366,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
 
     function _getValues(uint256 tAmount, uint256 currentRate)
         private
-        view
+        pure
         returns (
             uint256,
             uint256,
@@ -384,7 +384,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         bool disableFee
     )
         private
-        view
+        pure
         returns (
             uint256,
             uint256,
@@ -405,7 +405,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
 
     function _getTValues(uint256 tAmount, bool disableFee)
         private
-        view
+        pure
         returns (
             uint256,
             uint256,

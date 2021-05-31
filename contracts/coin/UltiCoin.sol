@@ -42,7 +42,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
     uint256 private constant _tFeePercent = 2;
     uint256 private constant _tBurnPercent = 2;
     uint256 private constant _tLiquidityPercent = 2;
-    
+
     uint256 private constant swapAndLiquifyPromil = 5;
 
     event IncludedInFee(address indexed account);
@@ -389,7 +389,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
 
     function _getValues(uint256 tAmount, uint256 currentRate)
         private
-        view
+        pure
         returns (
             uint256,
             uint256,
@@ -407,7 +407,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         bool disableFee
     )
         private
-        view
+        pure
         returns (
             uint256,
             uint256,
@@ -428,7 +428,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
 
     function _getTValues(uint256 tAmount, bool disableFee)
         private
-        view
+        pure
         returns (
             uint256,
             uint256,
