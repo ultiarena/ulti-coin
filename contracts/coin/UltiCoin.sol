@@ -425,7 +425,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         uint256 tFee = (tAmount * _tFeePercent) / 100;
         uint256 tLiquidity = (tAmount * _tLiquidityPercent) / 100;
         uint256 tBurn = (tAmount * _tBurnPercent) / 100;
-        uint256 tTransferAmount = tAmount - tFee - tBurn;
+        uint256 tTransferAmount = tAmount - tFee - tLiquidity - tBurn;
         return (tTransferAmount, tFee, tLiquidity, tBurn);
     }
 
