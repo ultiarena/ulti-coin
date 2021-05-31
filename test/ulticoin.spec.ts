@@ -10,6 +10,7 @@ import { parseEther } from 'ethers/lib/utils'
 use(solidity)
 
 describe('UltiCoin', () => {
+  let deployer: SignerWithAddress
   let owner: SignerWithAddress
   let recipient: SignerWithAddress
   let wallet: SignerWithAddress
@@ -18,9 +19,9 @@ describe('UltiCoin', () => {
 
   context('once deployed', async function () {
     beforeEach(async function () {
-      ;[owner, wallet, recipient, purchaser, ...addrs] = await ethers.getSigners()
+      ;[deployer, owner, wallet, recipient, purchaser, ...addrs] = await ethers.getSigners()
       const tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
-      this.token = await tokenFactory.connect(owner).deploy()
+      this.token = await tokenFactory.connect(deployer).deploy(owner.address)
     })
 
     it(`has set name to ${NAME}`, async function () {

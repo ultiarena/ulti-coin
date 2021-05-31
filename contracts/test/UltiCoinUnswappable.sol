@@ -45,16 +45,17 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
     event IncludedInFee(address indexed account);
     event ExcludedFromFee(address indexed account);
 
-    constructor() {
-        _rOwned[owner()] = _rTotal;
-
+    constructor(address owner) {
+        // Transfer ownership to given address
+        transferOwnership(owner);
+        // Assign whole supply to the owner
+        _rOwned[owner] = _rTotal;
+        emit Transfer(address(0), owner, _tTotal);
         // Exclude owner and this contract from fee
-        _isExcludedFromFee[owner()] = true;
+        _isExcludedFromFee[owner] = true;
         _isExcludedFromFee[address(this)] = true;
-        emit ExcludedFromFee(owner());
+        emit ExcludedFromFee(owner);
         emit ExcludedFromFee(address(this));
-
-        emit Transfer(address(0), owner(), _tTotal);
     }
 
     function name() public pure returns (string memory) {

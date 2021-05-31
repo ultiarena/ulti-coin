@@ -13,13 +13,16 @@ import {
   VESTING_INITIAL_PERCENT,
   VESTING_START_OFFSET,
   VESTING_CLIFF_DURATION,
-  VESTING_DURATION, GUARANTEED_SPOT_WHITELIST, CROWDSALE_WHITELIST,
+  VESTING_DURATION,
+  GUARANTEED_SPOT_WHITELIST,
+  CROWDSALE_WHITELIST,
 } from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 use(solidity)
 
 describe('UltiCrowdsale', () => {
+  let deployer: SignerWithAddress
   let admin: SignerWithAddress
   let investor: SignerWithAddress
   let other_investor: SignerWithAddress
@@ -31,7 +34,7 @@ describe('UltiCrowdsale', () => {
   let crowdsaleFactory: UltiCrowdsale__factory
 
   beforeEach(async () => {
-    ;[admin, wallet, investor, other_investor, purchaser, ...addrs] = await ethers.getSigners()
+    ;[deployer, admin, wallet, investor, other_investor, purchaser, ...addrs] = await ethers.getSigners()
     tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
     crowdsaleFactory = (await ethers.getContractFactory('UltiCrowdsale')) as UltiCrowdsale__factory
   })
@@ -44,7 +47,7 @@ describe('UltiCrowdsale', () => {
   const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
   async function proceedCrowdsale(crowdsale: UltiCrowdsale, token: UltiCoinUnswappable) {
-    await token.transfer(crowdsale.address, CROWDSALE_SUPPLY)
+    await token.connect(wallet).transfer(crowdsale.address, CROWDSALE_SUPPLY)
     await token.connect(wallet).excludeFromFee(crowdsale.address)
     await token.connect(wallet).excludeAccount(crowdsale.address)
 
@@ -69,7 +72,7 @@ describe('UltiCrowdsale', () => {
   context('once deployed and closed', async function () {
     beforeEach(async function () {
       await ethers.provider.send('hardhat_reset', [])
-      this.token = await tokenFactory.connect(wallet).deploy()
+      this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
       this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
       await proceedCrowdsale(this.crowdsale, this.token)
     })
@@ -282,7 +285,7 @@ describe('UltiCrowdsale', () => {
   context('during vesting', async function () {
     before(async function () {
       await ethers.provider.send('hardhat_reset', [])
-      this.token = await tokenFactory.connect(wallet).deploy()
+      this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
       this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
       await proceedCrowdsale(this.crowdsale, this.token)
     })

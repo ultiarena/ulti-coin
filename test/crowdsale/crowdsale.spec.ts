@@ -10,6 +10,7 @@ use(solidity)
 
 describe('Crowdsale', () => {
   let investor: SignerWithAddress
+  let deployer: SignerWithAddress
   let wallet: SignerWithAddress
   let purchaser: SignerWithAddress
   let addrs: SignerWithAddress[]
@@ -23,7 +24,7 @@ describe('Crowdsale', () => {
   let crowdsaleFactory: Crowdsale__factory
 
   beforeEach(async () => {
-    ;[wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
+    ;[deployer, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
     tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
     crowdsaleFactory = (await ethers.getContractFactory('Crowdsale')) as Crowdsale__factory
   })
@@ -36,7 +37,7 @@ describe('Crowdsale', () => {
 
   context('with token', async function () {
     beforeEach(async function () {
-      this.token = await tokenFactory.connect(wallet).deploy()
+      this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
       expect(await this.token.balanceOf(wallet.address)).to.equal(MAX_SUPPLY)
     })
 
@@ -55,8 +56,8 @@ describe('Crowdsale', () => {
     context('once deployed', async function () {
       beforeEach(async function () {
         this.crowdsale = await crowdsaleFactory.connect(wallet).deploy(rate, wallet.address, this.token.address)
-        await this.token.excludeFromFee(this.crowdsale.address)
-        await this.token.transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
+        await this.token.connect(wallet).excludeFromFee(this.crowdsale.address)
+        await this.token.connect(wallet).transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
         expect(await this.token.totalSupply()).to.equal(MAX_SUPPLY)
       })
 

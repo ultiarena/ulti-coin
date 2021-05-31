@@ -9,6 +9,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 use(solidity)
 
 describe('UltiCrowdsale time dependent', () => {
+  let deployer: SignerWithAddress
   let admin: SignerWithAddress
   let investor: SignerWithAddress
   let wallet: SignerWithAddress
@@ -32,7 +33,7 @@ describe('UltiCrowdsale time dependent', () => {
   ]
 
   beforeEach(async () => {
-    ;[admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
+    ;[deployer, admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
     tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
     crowdsaleFactory = (await ethers.getContractFactory('UltiCrowdsale')) as UltiCrowdsale__factory
   })
@@ -41,9 +42,9 @@ describe('UltiCrowdsale time dependent', () => {
     beforeEach(async function () {
       await ethers.provider.send('hardhat_reset', [])
 
-      this.token = await tokenFactory.connect(wallet).deploy()
+      this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
       this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
-      await this.token.transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
+      await this.token.connect(wallet).transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
 
       await ethers.provider.send('evm_setNextBlockTimestamp', [OPENING_TIME])
       await ethers.provider.send('evm_mine', [])
@@ -282,7 +283,9 @@ describe('UltiCrowdsale time dependent', () => {
                       this.crowdsale
                         .connect(purchaser)
                         .buyTokens(investor.address, { value: stageData.maxContribution?.add(1) })
-                    ).to.be.revertedWith('UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit')
+                    ).to.be.revertedWith(
+                      'UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit'
+                    )
                   })
 
                   it('reverts when value exceeds beneficiary limit', async function () {

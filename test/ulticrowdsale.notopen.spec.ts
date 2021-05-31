@@ -10,6 +10,7 @@ import { keccak256 } from 'ethers/lib/utils'
 use(solidity)
 
 describe('UltiCrowdsale', () => {
+  let deployer: SignerWithAddress
   let admin: SignerWithAddress
   let investor: SignerWithAddress
   let wallet: SignerWithAddress
@@ -26,7 +27,7 @@ describe('UltiCrowdsale', () => {
   })
 
   beforeEach(async () => {
-    ;[admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
+    ;[deployer, admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
     tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
     crowdsaleFactory = (await ethers.getContractFactory('UltiCrowdsale')) as UltiCrowdsale__factory
   })
@@ -39,12 +40,12 @@ describe('UltiCrowdsale', () => {
 
   context('with token', async function () {
     beforeEach(async function () {
-      this.token = await tokenFactory.connect(wallet).deploy()
+      this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
       expect(await this.token.balanceOf(wallet.address)).to.equal(MAX_SUPPLY)
     })
 
     it('requires a non-null wallet', async function () {
-      this.token = await tokenFactory.connect(wallet).deploy()
+      this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
       expect(await this.token.balanceOf(wallet.address)).to.equal(MAX_SUPPLY)
 
       await expect(crowdsaleFactory.deploy(ZERO_ADDRESS, this.token.address)).to.be.revertedWith(
@@ -55,7 +56,7 @@ describe('UltiCrowdsale', () => {
     context('once deployed and not yet open', async function () {
       beforeEach(async function () {
         this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
-        await this.token.transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
+        await this.token.connect(wallet).transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
         expect(await this.token.balanceOf(this.crowdsale.address)).to.equal(CROWDSALE_SUPPLY)
       })
 
