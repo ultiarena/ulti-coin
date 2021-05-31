@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
+import './coin/UniSwappable.sol';
 
 /*
  *    |  \  |  \|  \      |        \|      \       /      \           |  \
@@ -20,52 +20,53 @@ import '@openzeppelin/contracts/utils/Address.sol';
 contract UltiCoin is Context, IERC20, Ownable {
     using Address for address;
 
+    string private constant _name = 'ULTI Coin';
+    string private constant _symbol = 'ULTI';
+    uint8 private constant _decimals = 18;
+
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
 
     mapping(address => bool) private _isExcludedFromFee;
-
     mapping(address => bool) private _isExcluded;
     address[] private _excluded;
 
     uint256 private constant MAX = ~uint256(0);
-    uint256 private _tTotal = 250 * 1e9 * 1e18;
+    uint256 private _tTotal = 250 * 1e9 * (10**uint256(_decimals));
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
     uint256 private _tBurnTotal;
+    uint256 private _tLiquidityTotal;
 
     uint256 private _tFeePercent = 2;
     uint256 private _tBurnPercent = 2;
-
-    string private _name = 'UltiCoin';
-    string private _symbol = 'ULTI';
-    uint8 private _decimals = 18;
+    uint256 private _tLiquidityPercent = 2;
 
     event IncludedInFee(address indexed account);
     event ExcludedFromFee(address indexed account);
 
     constructor() {
-        _rOwned[_msgSender()] = _rTotal;
+        _rOwned[owner()] = _rTotal;
 
-        //exclude owner and this contract from fee
+        // Exclude owner and this contract from fee
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
         emit ExcludedFromFee(owner());
         emit ExcludedFromFee(address(this));
 
-        emit Transfer(address(0), _msgSender(), _tTotal);
+        emit Transfer(address(0), owner(), _tTotal);
     }
 
-    function name() public view returns (string memory) {
+    function name() public pure returns (string memory) {
         return _name;
     }
 
-    function symbol() public view returns (string memory) {
+    function symbol() public pure returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public view returns (uint8) {
+    function decimals() public pure returns (uint8) {
         return _decimals;
     }
 
@@ -138,9 +139,10 @@ contract UltiCoin is Context, IERC20, Ownable {
         address sender = _msgSender();
         require(!_isExcluded[sender], 'Excluded addresses cannot call this function');
         require(_balanceOf(sender) >= tAmount, 'Reflect amount exceeds sender balance');
-        (uint256 rAmount, , , , , ) = _getValues(tAmount);
-        _rOwned[sender] = _rOwned[sender] - rAmount;
-        _reflectFee(rAmount, 0, tAmount, 0);
+
+        uint256 currentRate = _getRate();
+        _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
+        _reflectFeeAndBurn(tAmount, 0, currentRate);
     }
 
     function burn(uint256 amount) public {
@@ -156,11 +158,11 @@ contract UltiCoin is Context, IERC20, Ownable {
 
     function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns (uint256) {
         require(tAmount <= _tTotal, 'Amount must be less than supply');
+        uint256 currentRate = _getRate();
         if (!deductTransferFee) {
-            (uint256 rAmount, , , , , ) = _getValues(tAmount);
-            return rAmount;
+            return tAmount * currentRate;
         } else {
-            (, uint256 rTransferAmount, , , , ) = _getValues(tAmount);
+            (uint256 rTransferAmount, , , , ) = _getValues(tAmount, currentRate);
             return rTransferAmount;
         }
     }
@@ -172,7 +174,7 @@ contract UltiCoin is Context, IERC20, Ownable {
     }
 
     function excludeAccount(address account) external onlyOwner() {
-        // require(account != 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, 'We can not exclude Uniswap router.');
+        // require(account != 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F, 'We can not exclude Pancake router.');
         require(account != address(this), 'Cannot exclude self contract');
         require(!_isExcluded[account], 'Account is already excluded');
         if (_rOwned[account] > 0) {
@@ -226,12 +228,13 @@ contract UltiCoin is Context, IERC20, Ownable {
     function _burn(address account, uint256 tAmount) internal {
         require(account != address(0), 'ERC20: burn from the zero address');
         require(_balanceOf(account) >= tAmount, 'ERC20: burn amount exceeds balance');
-        (uint256 rAmount, , , , , ) = _getValues(tAmount);
-        _rOwned[account] = _rOwned[account] - rAmount;
+
+        uint256 currentRate = _getRate();
+        _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
         if (_isExcluded[account]) {
             _tOwned[account] = _tOwned[account] - tAmount;
         }
-        _reflectFee(0, rAmount, 0, tAmount);
+        _reflectFeeAndBurn(0, tAmount, currentRate);
 
         emit Transfer(account, address(0), tAmount);
     }
@@ -244,96 +247,109 @@ contract UltiCoin is Context, IERC20, Ownable {
         require(sender != address(0), 'ERC20: transfer from the zero address');
         require(recipient != address(0), 'ERC20: transfer to the zero address');
         require(amount > 0, 'Transfer amount must be greater than zero');
+
+        bool disableFee = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
+
         if (_isExcluded[sender] && !_isExcluded[recipient]) {
-            _transferFromExcluded(sender, recipient, amount);
+            _transferFromExcluded(sender, recipient, amount, disableFee);
         } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
-            _transferToExcluded(sender, recipient, amount);
+            _transferToExcluded(sender, recipient, amount, disableFee);
         } else if (!_isExcluded[sender] && !_isExcluded[recipient]) {
-            _transferStandard(sender, recipient, amount);
+            _transferStandard(sender, recipient, amount, disableFee);
         } else if (_isExcluded[sender] && _isExcluded[recipient]) {
-            _transferBothExcluded(sender, recipient, amount);
+            _transferBothExcluded(sender, recipient, amount, disableFee);
         } else {
-            _transferStandard(sender, recipient, amount);
+            _transferStandard(sender, recipient, amount, disableFee);
         }
     }
 
     function _transferStandard(
         address sender,
         address recipient,
-        uint256 tAmount
+        uint256 tAmount,
+        bool disableFee
     ) private {
-        bool isExcludedFromFeeTx = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn) =
-            _getValues(tAmount, isExcludedFromFeeTx);
-        uint256 rBurn = tBurn * _getRate();
-        _rOwned[sender] = _rOwned[sender] - rAmount;
+        uint256 currentRate = _getRate();
+        (uint256 rTransferAmount, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tBurn) =
+            _getValues(tAmount, currentRate, disableFee);
+        _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
-        _reflectFee(rFee, rBurn, tFee, tBurn);
+        _takeLiquidity(tLiquidity, currentRate);
+        _reflectFeeAndBurn(tFee, tBurn, currentRate);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
     function _transferToExcluded(
         address sender,
         address recipient,
-        uint256 tAmount
+        uint256 tAmount,
+        bool disableFee
     ) private {
-        bool isExcludedFromFeeTx = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn) =
-            _getValues(tAmount, isExcludedFromFeeTx);
-        uint256 rBurn = tBurn * _getRate();
-        _rOwned[sender] = _rOwned[sender] - rAmount;
+        uint256 currentRate = _getRate();
+        (uint256 rTransferAmount, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tBurn) =
+            _getValues(tAmount, currentRate, disableFee);
+        _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
         _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
-        _reflectFee(rFee, rBurn, tFee, tBurn);
+        _takeLiquidity(tLiquidity, currentRate);
+        _reflectFeeAndBurn(tFee, tBurn, currentRate);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
     function _transferFromExcluded(
         address sender,
         address recipient,
-        uint256 tAmount
+        uint256 tAmount,
+        bool disableFee
     ) private {
-        bool isExcludedFromFeeTx = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn) =
-            _getValues(tAmount, isExcludedFromFeeTx);
-        uint256 rBurn = tBurn * _getRate();
+        uint256 currentRate = _getRate();
+        (uint256 rTransferAmount, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tBurn) =
+            _getValues(tAmount, currentRate, disableFee);
         _tOwned[sender] = _tOwned[sender] - tAmount;
-        _rOwned[sender] = _rOwned[sender] - rAmount;
+        _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
-        _reflectFee(rFee, rBurn, tFee, tBurn);
+        _takeLiquidity(tLiquidity, currentRate);
+        _reflectFeeAndBurn(tFee, tBurn, currentRate);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
     function _transferBothExcluded(
         address sender,
         address recipient,
-        uint256 tAmount
+        uint256 tAmount,
+        bool disableFee
     ) private {
-        bool isExcludedFromFeeTx = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tBurn) =
-            _getValues(tAmount, isExcludedFromFeeTx);
-        uint256 rBurn = tBurn * _getRate();
+        uint256 currentRate = _getRate();
+        (uint256 rTransferAmount, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tBurn) =
+            _getValues(tAmount, currentRate, disableFee);
         _tOwned[sender] = _tOwned[sender] - tAmount;
-        _rOwned[sender] = _rOwned[sender] - rAmount;
+        _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
         _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
-        _reflectFee(rFee, rBurn, tFee, tBurn);
+        _takeLiquidity(tLiquidity, currentRate);
+        _reflectFeeAndBurn(tFee, tBurn, currentRate);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
-    function _reflectFee(
-        uint256 rFee,
-        uint256 rBurn,
+    function _takeLiquidity(uint256 tLiquidity, uint256 currentRate) private {
+        _rOwned[address(this)] = _rOwned[address(this)] + (tLiquidity * currentRate);
+        if (_isExcluded[address(this)]) {
+            _tOwned[address(this)] = _tOwned[address(this)] + tLiquidity;
+        }
+    }
+
+    function _reflectFeeAndBurn(
         uint256 tFee,
-        uint256 tBurn
+        uint256 tBurn,
+        uint256 currentRate
     ) private {
-        _rTotal = _rTotal - rFee - rBurn;
+        _rTotal = _rTotal - (tFee * currentRate) - (tBurn * currentRate);
         _tBurnTotal = _tBurnTotal + tBurn;
         _tFeeTotal = _tFeeTotal + tFee;
         _tTotal = _tTotal - tBurn;
     }
 
-    function _getValues(uint256 tAmount)
+    function _getValues(uint256 tAmount, uint256 currentRate)
         private
         view
         returns (
@@ -341,14 +357,17 @@ contract UltiCoin is Context, IERC20, Ownable {
             uint256,
             uint256,
             uint256,
-            uint256,
             uint256
         )
     {
-        return _getValues(tAmount, false);
+        return _getValues(tAmount, currentRate, false);
     }
 
-    function _getValues(uint256 tAmount, bool isExcludedFromFee_)
+    function _getValues(
+        uint256 tAmount,
+        uint256 currentRate,
+        bool disableFee
+    )
         private
         view
         returns (
@@ -356,53 +375,52 @@ contract UltiCoin is Context, IERC20, Ownable {
             uint256,
             uint256,
             uint256,
-            uint256,
             uint256
         )
     {
-        (uint256 tTransferAmount, uint256 tFee, uint256 tBurn) = _getTValues(tAmount, isExcludedFromFee_);
-        (uint256 rAmount, uint256 rTransferAmount, uint256 rFee) = _getRValues(tAmount, tFee, tBurn, _getRate());
-        return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee, tBurn);
+        (uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tBurn) = _getTValues(tAmount, disableFee);
+        return (
+            _getRTransferAmount(tAmount, tFee, tLiquidity, tBurn, currentRate),
+            tTransferAmount,
+            tFee,
+            tLiquidity,
+            tBurn
+        );
     }
 
-    function _getTValues(uint256 tAmount, bool isExcludedFromFee_)
+    function _getTValues(uint256 tAmount, bool disableFee)
         private
         view
         returns (
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
-        if (isExcludedFromFee_) {
-            return (tAmount, 0, 0);
+        if (disableFee) {
+            return (tAmount, 0, 0, 0);
         }
 
         uint256 tFee = (tAmount * _tFeePercent) / 100;
+        uint256 tLiquidity = (tAmount * _tLiquidityPercent) / 100;
         uint256 tBurn = (tAmount * _tBurnPercent) / 100;
         uint256 tTransferAmount = tAmount - tFee - tBurn;
-        return (tTransferAmount, tFee, tBurn);
+        return (tTransferAmount, tFee, tLiquidity, tBurn);
     }
 
-    function _getRValues(
+    function _getRTransferAmount(
         uint256 tAmount,
         uint256 tFee,
+        uint256 tLiquidity,
         uint256 tBurn,
         uint256 currentRate
-    )
-        private
-        pure
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    ) private pure returns (uint256) {
         uint256 rAmount = tAmount * currentRate;
         uint256 rFee = tFee * currentRate;
+        uint256 rLiquidity = tLiquidity * currentRate;
         uint256 rBurn = tBurn * currentRate;
-        uint256 rTransferAmount = rAmount - rFee - rBurn;
-        return (rAmount, rTransferAmount, rFee);
+        return rAmount - rFee - rLiquidity - rBurn;
     }
 
     function _getRate() private view returns (uint256) {

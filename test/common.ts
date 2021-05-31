@@ -21,7 +21,7 @@ const MAX_SUPPLY = toWei(BigNumber.from(250000000000))
 const INITIAL_SUPPLY = toWei(BigNumber.from(160620000000))
 const CROWDSALE_SUPPLY = toWei(BigNumber.from(59370000000))
 
-const NAME = 'UltiCoin'
+const NAME = 'ULTI Coin'
 const SYMBOL = 'ULTI'
 const DECIMALS = 18
 
