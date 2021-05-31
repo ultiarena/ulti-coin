@@ -39,9 +39,11 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
     uint256 private _tBurnTotal;
     uint256 private _tLiquidityTotal;
 
-    uint256 private _tFeePercent = 2;
-    uint256 private _tBurnPercent = 2;
-    uint256 private _tLiquidityPercent = 2;
+    uint256 private constant _tFeePercent = 2;
+    uint256 private constant _tBurnPercent = 2;
+    uint256 private constant _tLiquidityPercent = 2;
+    
+    uint256 private constant swapAndLiquifyPromil = 5;
 
     event IncludedInFee(address indexed account);
     event ExcludedFromFee(address indexed account);
@@ -248,7 +250,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         require(recipient != address(0), 'ERC20: transfer to the zero address');
         require(amount > 0, 'Transfer amount must be greater than zero');
 
-        uint256 swapAndLiquifyAmount = (_tTotal * 1) / 1000;
+        uint256 swapAndLiquifyAmount = (_tTotal * swapAndLiquifyPromil) / 1000;
         if (
             isSwapAndLiquifyEnabled &&
             !isInSwapAndLiquify() &&

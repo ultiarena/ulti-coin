@@ -38,9 +38,9 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
     uint256 private _tBurnTotal;
     uint256 private _tLiquidityTotal;
 
-    uint256 private _tFeePercent = 2;
-    uint256 private _tBurnPercent = 2;
-    uint256 private _tLiquidityPercent = 2;
+    uint256 private constant _tFeePercent = 2;
+    uint256 private constant _tBurnPercent = 2;
+    uint256 private constant _tLiquidityPercent = 2;
 
     event IncludedInFee(address indexed account);
     event ExcludedFromFee(address indexed account);
