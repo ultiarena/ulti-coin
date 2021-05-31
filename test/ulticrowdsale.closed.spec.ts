@@ -5,8 +5,6 @@ import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
 import {
   stagesData,
-  MAXIMAL_CONTRIBUTION,
-  MINIMAL_CONTRIBUTION,
   OPENING_TIME,
   Stages,
   CROWDSALE_SUPPLY,
@@ -15,7 +13,7 @@ import {
   VESTING_INITIAL_PERCENT,
   VESTING_START_OFFSET,
   VESTING_CLIFF_DURATION,
-  VESTING_DURATION,
+  VESTING_DURATION, GUARANTEED_SPOT_WHITELIST, CROWDSALE_WHITELIST,
 } from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
@@ -57,6 +55,7 @@ describe('UltiCrowdsale', () => {
     await ethers.provider.send('evm_setNextBlockTimestamp', [beforeClosingTimestamp])
     await ethers.provider.send('evm_mine', [])
 
+    await crowdsale.connect(admin).bulkAddToWhitelist(CROWDSALE_WHITELIST, [investor.address, other_investor.address])
     await crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
     expect(await crowdsale.tokensBought(investor.address)).to.be.equal(expectedTokenAmount)
 

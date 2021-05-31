@@ -28,7 +28,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
     uint256 public constant CLOSING_TIME = 1631451600; // 12-09-2021 13:00 UTC
 
     bytes32 public constant GUARANTEED_SPOT_WHITELIST = keccak256('GUARANTEED_SPOT_WHITELIST');
-    bytes32 public constant PRIVATE_SALE_WHITELIST = keccak256('PRIVATE_SALE_WHITELIST');
+    bytes32 public constant CROWDSALE_WHITELIST = keccak256('CROWDSALE_WHITELIST');
 
     uint256 public constant MIN_PRIVATE_SALE_CONTRIBUTION = 5 * 1e17; // 0.5 BNB
     uint256 public constant MAX_PRIVATE_SALE_CONTRIBUTION = 5 * 1e18; // 5 BNB
@@ -125,18 +125,18 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
                 _weiContributed[beneficiary] + weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
                 'UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit'
             );
+        }
 
-            bool isGuaranteedSpotWhitelisted = _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary);
-            bool isPrivateSaleWhitelisted = _isWhitelisted(PRIVATE_SALE_WHITELIST, beneficiary);
+        bool isGuaranteedSpotWhitelisted = _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary);
+        bool isCrowdsaleWhitelisted = _isWhitelisted(CROWDSALE_WHITELIST, beneficiary);
 
-            if (stage_ == CrowdsaleStage.GuaranteedSpot) {
-                require(isGuaranteedSpotWhitelisted, 'UltiCrowdsale: beneficiary is not on whitelist');
-            } else {
-                require(
-                    isGuaranteedSpotWhitelisted || isPrivateSaleWhitelisted,
-                    'UltiCrowdsale: beneficiary is not on whitelist'
-                );
-            }
+        if (stage_ == CrowdsaleStage.GuaranteedSpot) {
+            require(isGuaranteedSpotWhitelisted, 'UltiCrowdsale: beneficiary is not on whitelist');
+        } else {
+            require(
+                isGuaranteedSpotWhitelisted || isCrowdsaleWhitelisted,
+                'UltiCrowdsale: beneficiary is not on whitelist'
+            );
         }
     }
 
