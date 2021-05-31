@@ -11,15 +11,8 @@ async function main() {
   })
 
   console.log('UltiCoin deployed to:', token.address)
-
-  const wallet = '0x'
-
-  const crowdsaleFactory = await ethers.getContractFactory('UltiCrowdsale')
-  const crowdsale = await crowdsaleFactory.deploy(wallet, token.address)
-
-  console.log('UltiCrowdsale deployed to:', crowdsale.address)
 }
-0xdc25ef3f5b8a186998338a2ada83795fba2d695e
+
 main()
   .then(() => process.exit(0))
   .catch((error) => {

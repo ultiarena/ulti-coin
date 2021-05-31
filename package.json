@@ -10,8 +10,12 @@
     "clean": "hardhat clean",
     "coverage": "hardhat coverage",
     "test": "hardhat test",
-    "deploy-testnet": "hardhat run --network bsc_testnet scripts/deploy.ts",
+    "coin-deploy": "hardhat run --network bsc_testnet scripts/coin_deploy.ts",
+    "coin-bytecode": "hardhat run --network bsc_testnet scripts/coin_bytecode.ts",
+    "crowdsale-deploy": "hardhat run --network bsc_testnet scripts/crowdsale_deploy.ts",
+    "crowdsale-bytecode": "hardhat run --network bsc_testnet scripts/crowdsale_bytecode.ts",
     "verify-testnet": "hardhat verify --network bsc_testnet",
+    "verify-mainnet": "hardhat verify --network bsc",
     "format": "prettier --write \"**/*.ts\" \"contracts/**/*.sol\"",
     "lint": "solhint \"contracts/**/*.sol\"",
     "typecheck": "yarn compile && yarn test && yarn tsc --noEmit"
