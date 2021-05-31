@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import './crowdsale/Crowdsale.sol';
-import './crowdsale/TimedCrowdsale.sol';
-import './crowdsale/PostVestingCrowdsale.sol';
-import './crowdsale/WhitelistAccess.sol';
+import './extension/Crowdsale.sol';
+import './extension/TimedCrowdsale.sol';
+import './extension/PostVestingCrowdsale.sol';
+import './extension/WhitelistAccess.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 
 contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, WhitelistAccess {
