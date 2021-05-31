@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
-import './coin/UniSwappable.sol';
+import './coin/SwapAndLiquify.sol';
 
 /*
  *    |  \  |  \|  \      |        \|      \       /      \           |  \
@@ -17,7 +17,7 @@ import './coin/UniSwappable.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is Context, IERC20, Ownable {
+contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
     using Address for address;
 
     string private constant _name = 'ULTI Coin';
@@ -46,7 +46,7 @@ contract UltiCoin is Context, IERC20, Ownable {
     event IncludedInFee(address indexed account);
     event ExcludedFromFee(address indexed account);
 
-    constructor() {
+    constructor(address router) SwapAndLiquify(router) {
         _rOwned[owner()] = _rTotal;
 
         // Exclude owner and this contract from fee
@@ -248,6 +248,26 @@ contract UltiCoin is Context, IERC20, Ownable {
         require(recipient != address(0), 'ERC20: transfer to the zero address');
         require(amount > 0, 'Transfer amount must be greater than zero');
 
+        uint256 swapAndLiquifyAmount = (_tTotal * 1) / 1000;
+        if (
+            isSwapAndLiquifyEnabled &&
+            !isInSwapAndLiquify() &&
+            sender != uniswapV2Pair &&
+            _balanceOf(address(this)) >= swapAndLiquifyAmount
+        ) {
+            // approve router to transfer tokens to cover all possible scenarios
+            _approve(address(this), address(uniswapV2Router), swapAndLiquifyAmount);
+            _swapAndLiquify(swapAndLiquifyAmount);
+        }
+
+        _tokenTransfer(sender, recipient, amount);
+    }
+
+    function _tokenTransfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) private {
         bool disableFee = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
 
         if (_isExcluded[sender] && !_isExcluded[recipient]) {
