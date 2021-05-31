@@ -11,4 +11,4 @@ artifacts/
 cache/
 crytic-export/
 typechain/
-contracts/UltiCrowdsaleTestnet.sol
+contracts/test/UltiCrowdsaleTestnet.sol

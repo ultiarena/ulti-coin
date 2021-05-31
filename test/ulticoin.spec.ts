@@ -1,6 +1,6 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCoin__factory, UltiCoin, UltiCrowdsale__factory } from '../typechain'
+import { UltiCoinUnswappable__factory, UltiCoin, UltiCrowdsale__factory } from '../typechain'
 import { solidity } from 'ethereum-waffle'
 import { DECIMALS, MAX_SUPPLY, NAME, SYMBOL } from './common'
 import { BigNumber, utils } from 'ethers'
@@ -19,7 +19,7 @@ describe('UltiCoin', () => {
   context('once deployed', async function () {
     beforeEach(async function () {
       ;[owner, wallet, recipient, purchaser, ...addrs] = await ethers.getSigners()
-      const tokenFactory = (await ethers.getContractFactory('UltiCoin')) as UltiCoin__factory
+      const tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
       this.token = await tokenFactory.connect(owner).deploy()
     })
 

@@ -1,6 +1,6 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCrowdsale__factory, UltiCoin__factory, UltiCrowdsale, UltiCoin } from '../typechain'
+import {UltiCrowdsale__factory, UltiCoinUnswappable__factory, UltiCrowdsale, UltiCoinUnswappable} from '../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
 import {
@@ -29,12 +29,12 @@ describe('UltiCrowdsale', () => {
   let purchaser: SignerWithAddress
   let addrs: SignerWithAddress[]
 
-  let tokenFactory: UltiCoin__factory
+  let tokenFactory: UltiCoinUnswappable__factory
   let crowdsaleFactory: UltiCrowdsale__factory
 
   beforeEach(async () => {
     ;[admin, wallet, investor, other_investor, purchaser, ...addrs] = await ethers.getSigners()
-    tokenFactory = (await ethers.getContractFactory('UltiCoin')) as UltiCoin__factory
+    tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
     crowdsaleFactory = (await ethers.getContractFactory('UltiCrowdsale')) as UltiCrowdsale__factory
   })
 
@@ -45,7 +45,7 @@ describe('UltiCrowdsale', () => {
   const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
   const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
-  async function proceedCrowdsale(crowdsale: UltiCrowdsale, token: UltiCoin) {
+  async function proceedCrowdsale(crowdsale: UltiCrowdsale, token: UltiCoinUnswappable) {
     await token.transfer(crowdsale.address, CROWDSALE_SUPPLY)
     await token.connect(wallet).excludeFromFee(crowdsale.address)
     await token.connect(wallet).excludeAccount(crowdsale.address)

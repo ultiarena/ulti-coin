@@ -1,6 +1,6 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { Crowdsale__factory, UltiCoin__factory } from '../../typechain'
+import { Crowdsale__factory, UltiCoinUnswappable__factory } from '../../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
 import { CROWDSALE_SUPPLY, INITIAL_SUPPLY, MAX_SUPPLY, toWei, ZERO_ADDRESS } from '../common'
@@ -19,12 +19,12 @@ describe('Crowdsale', () => {
   const value = utils.parseEther('1')
   const expectedTokenAmount = rate.mul(value)
 
-  let tokenFactory: UltiCoin__factory
+  let tokenFactory: UltiCoinUnswappable__factory
   let crowdsaleFactory: Crowdsale__factory
 
   beforeEach(async () => {
     ;[wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
-    tokenFactory = (await ethers.getContractFactory('UltiCoin')) as UltiCoin__factory
+    tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
     crowdsaleFactory = (await ethers.getContractFactory('Crowdsale')) as Crowdsale__factory
   })
 
