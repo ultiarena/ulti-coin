@@ -45,6 +45,8 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
 
     event IncludedInFee(address indexed account);
     event ExcludedFromFee(address indexed account);
+    event IncludedInReward(address indexed account);
+    event ExcludedFromReward(address indexed account);
 
     constructor(address owner) {
         // Transfer ownership to given address
@@ -182,12 +184,14 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
                 _tOwned[account] = tokenFromReflection(_rOwned[account]);
             }
             _excludedFromReward.add(account);
+            emit ExcludedFromReward(account);
         }
     }
 
     function includeInReward(address account) external onlyOwner() {
         if (_excludedFromReward.remove(account)) {
             _tOwned[account] = 0;
+            emit IncludedInReward(account);
         }
     }
 

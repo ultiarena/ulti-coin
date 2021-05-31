@@ -48,6 +48,8 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
 
     event IncludedInFee(address indexed account);
     event ExcludedFromFee(address indexed account);
+    event IncludedInReward(address indexed account);
+    event ExcludedFromReward(address indexed account);
 
     constructor(address owner, address router) SwapAndLiquify(router) {
         // Transfer ownership to given address
@@ -185,12 +187,14 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
                 _tOwned[account] = tokenFromReflection(_rOwned[account]);
             }
             _excludedFromReward.add(account);
+            emit ExcludedFromReward(account);
         }
     }
 
     function includeInReward(address account) external onlyOwner() {
         if (_excludedFromReward.remove(account)) {
             _tOwned[account] = 0;
+            emit IncludedInReward(account);
         }
     }
 
