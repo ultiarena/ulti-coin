@@ -275,7 +275,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
         _takeLiquidity(tLiquidity, currentRate);
         _reflectFeeAndBurn(tFee, tBurn, currentRate);
-        emit Transfer(sender, recipient, tTransferAmount);
+        _emitTransfers(sender, recipient, tTransferAmount, tBurn, tLiquidity);
     }
 
     function _transferToExcluded(
@@ -292,7 +292,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
         _takeLiquidity(tLiquidity, currentRate);
         _reflectFeeAndBurn(tFee, tBurn, currentRate);
-        emit Transfer(sender, recipient, tTransferAmount);
+        _emitTransfers(sender, recipient, tTransferAmount, tBurn, tLiquidity);
     }
 
     function _transferFromExcluded(
@@ -309,7 +309,7 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
         _takeLiquidity(tLiquidity, currentRate);
         _reflectFeeAndBurn(tFee, tBurn, currentRate);
-        emit Transfer(sender, recipient, tTransferAmount);
+        _emitTransfers(sender, recipient, tTransferAmount, tBurn, tLiquidity);
     }
 
     function _transferBothExcluded(
@@ -327,7 +327,23 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
         _takeLiquidity(tLiquidity, currentRate);
         _reflectFeeAndBurn(tFee, tBurn, currentRate);
+        _emitTransfers(sender, recipient, tTransferAmount, tBurn, tLiquidity);
+    }
+
+    function _emitTransfers(
+        address sender,
+        address recipient,
+        uint256 tTransferAmount,
+        uint256 tBurn,
+        uint256 tLiquidity
+    ) private {
         emit Transfer(sender, recipient, tTransferAmount);
+        if (tBurn > 0) {
+            emit Transfer(sender, address(0), tBurn);
+        }
+        if (tLiquidity > 0) {
+            emit Transfer(sender, address(this), tLiquidity);
+        }
     }
 
     function _takeLiquidity(uint256 tLiquidity, uint256 currentRate) private {

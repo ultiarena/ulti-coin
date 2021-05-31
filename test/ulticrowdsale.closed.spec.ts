@@ -1,6 +1,6 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import {UltiCrowdsale__factory, UltiCoinUnswappable__factory, UltiCrowdsale, UltiCoinUnswappable} from '../typechain'
+import { UltiCrowdsale__factory, UltiCoinUnswappable__factory, UltiCrowdsale, UltiCoinUnswappable } from '../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
 import {
