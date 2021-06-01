@@ -2,10 +2,15 @@ import '@nomiclabs/hardhat-etherscan'
 import '@nomiclabs/hardhat-waffle'
 import '@typechain/hardhat'
 import 'solidity-coverage'
-const { mnemonic, bscApiKey } = require('./.secrets.json')
+const { mnemonic, etherscanApiKey, infuraApiKey } = require('./.secrets.json')
 
 module.exports = {
   networks: {
+    kovan: {
+      url: `https://kovan.infura.io/v3/${infuraApiKey}`,
+      chainId: 42,
+      accounts: { mnemonic: mnemonic },
+    },
     bsc_testnet: {
       url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
       chainId: 97,
@@ -18,8 +23,7 @@ module.exports = {
     },
   },
   etherscan: {
-    // Your API key for Binance Smart Chain
-    apiKey: bscApiKey,
+    apiKey: etherscanApiKey,
   },
   solidity: {
     version: '0.8.0',
