@@ -166,7 +166,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         _weiContributed[beneficiary] = _weiContributed[beneficiary] + weiAmount;
     }
 
-    function _currentStage() public view returns (CrowdsaleStage) {
+    function _currentStage() private view returns (CrowdsaleStage) {
         if (!isOpen()) {
             return CrowdsaleStage.Inactive;
         }
