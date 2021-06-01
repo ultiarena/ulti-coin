@@ -208,6 +208,10 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         emit IncludedInFee(account);
     }
 
+    function switchSwapAndLiquify() external onlyOwner() {
+        return _switchSwapAndLiquify();
+    }
+
     function _balanceOf(address account) private view returns (uint256) {
         if (isExcludedFromReward(account)) return _tOwned[account];
         return tokenFromReflection(_rOwned[account]);

@@ -12,7 +12,7 @@ abstract contract SwapAndLiquify is Context {
     address public immutable uniswapV2Pair;
 
     bool private _isInSwapAndLiquify = false;
-    bool public isSwapAndLiquifyEnabled = false;
+    bool public isSwapAndLiquifyEnabled = true;
 
     address payable public swapLeftoversReceiver;
 
