@@ -3,7 +3,14 @@ import { ethers } from 'hardhat'
 import { UltiCrowdsale__factory, UltiCoinUnswappable__factory } from '../typechain'
 import { solidity } from 'ethereum-waffle'
 import { utils } from 'ethers'
-import { CROWDSALE_WHITELIST, Stages, CROWDSALE_SUPPLY, ZERO_ADDRESS, MAX_SUPPLY } from './common'
+import {
+  CROWDSALE_WHITELIST,
+  Stages,
+  CROWDSALE_SUPPLY,
+  ZERO_ADDRESS,
+  MAX_SUPPLY,
+  GUARANTEED_SPOT_WHITELIST
+} from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { keccak256 } from 'ethers/lib/utils'
 
@@ -56,6 +63,7 @@ describe('UltiCrowdsale', () => {
     context('once deployed and not yet open', async function () {
       beforeEach(async function () {
         this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
+        await this.crowdsale.connect(admin).addToWhitelist(GUARANTEED_SPOT_WHITELIST, investor.address)
         await this.token.connect(wallet).transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
         expect(await this.token.balanceOf(this.crowdsale.address)).to.equal(CROWDSALE_SUPPLY)
       })

@@ -100,7 +100,7 @@ describe('UltiCrowdsale time dependent', () => {
 
           it('reverts on tokens release', async function () {
             await expect(this.crowdsale.connect(purchaser).releaseTokens(investor.address)).to.be.revertedWith(
-              'PostVestingCrowdsale: not closed'
+              'UltiCrowdsale: beneficiary is not on whitelist'
             )
           })
 

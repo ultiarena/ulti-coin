@@ -59,7 +59,7 @@ describe('UltiCrowdsale', () => {
     await ethers.provider.send('evm_setNextBlockTimestamp', [beforeClosingTimestamp])
     await ethers.provider.send('evm_mine', [])
 
-    await crowdsale.connect(admin).bulkAddToWhitelist(CROWDSALE_WHITELIST, [investor.address, other_investor.address])
+    await crowdsale.connect(admin).bulkAddToWhitelist(CROWDSALE_WHITELIST, [investor.address, other_investor.address, purchaser.address])
     await crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
     expect(await crowdsale.tokensBought(investor.address)).to.be.equal(expectedTokenAmount)
 
@@ -150,7 +150,7 @@ describe('UltiCrowdsale', () => {
 
           it(`reverts on ZERO_ADDRESS beneficiary`, async function () {
             await expect(this.crowdsale.releaseTokens(ZERO_ADDRESS)).to.be.revertedWith(
-              'PostVestingCrowdsale: beneficiary is the zero address'
+              'UltiCrowdsale: beneficiary is the zero address'
             )
           })
 

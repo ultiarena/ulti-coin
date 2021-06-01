@@ -79,8 +79,7 @@ abstract contract PostVestingCrowdsale is TimedCrowdsale {
      * @dev after crowdsale ends it releases tokens from vesting.
      * @param beneficiary Whose tokens will be withdrawn.
      */
-    function releaseTokens(address beneficiary) public {
-        require(beneficiary != address(0), 'PostVestingCrowdsale: beneficiary is the zero address');
+    function _releaseTokens(address beneficiary) internal {
         require(hasClosed(), 'PostVestingCrowdsale: not closed');
         require(
             _balances[beneficiary] - _released[beneficiary] > 0,

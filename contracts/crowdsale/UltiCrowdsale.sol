@@ -105,6 +105,15 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         return _stages[stage_].weiRaised;
     }
 
+    function releaseTokens(address beneficiary) public {
+        require(beneficiary != address(0), 'UltiCrowdsale: beneficiary is the zero address');
+        require(
+            _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary) || _isWhitelisted(CROWDSALE_WHITELIST, beneficiary),
+            'UltiCrowdsale: beneficiary is not on whitelist'
+        );
+        return _releaseTokens(beneficiary);
+    }
+
     function burn(uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
         require(hasClosed(), 'UltiCrowdsale: crowdsale not closed');
         uint256 crowdsaleBalance = token().balanceOf(address(this));
@@ -123,7 +132,19 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
     {
         Crowdsale._preValidatePurchase(beneficiary, weiAmount);
 
+        bool isGuaranteedSpotWhitelisted = _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary);
+        bool isCrowdsaleWhitelisted = _isWhitelisted(CROWDSALE_WHITELIST, beneficiary);
         CrowdsaleStage stage_ = _currentStage();
+        // Check if beneficiary is whitelisted
+        if (stage_ == CrowdsaleStage.GuaranteedSpot) {
+            require(isGuaranteedSpotWhitelisted, 'UltiCrowdsale: beneficiary is not on whitelist');
+        } else {
+            require(
+                isGuaranteedSpotWhitelisted || isCrowdsaleWhitelisted,
+                'UltiCrowdsale: beneficiary is not on whitelist'
+            );
+        }
+        // Check beneficiary contribution
         if (stage_ == CrowdsaleStage.GuaranteedSpot || stage_ == CrowdsaleStage.PrivateSale) {
             require(
                 weiAmount >= MIN_PRIVATE_SALE_CONTRIBUTION,
@@ -132,18 +153,6 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
             require(
                 _weiContributed[beneficiary] + weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
                 'UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit'
-            );
-        }
-
-        bool isGuaranteedSpotWhitelisted = _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary);
-        bool isCrowdsaleWhitelisted = _isWhitelisted(CROWDSALE_WHITELIST, beneficiary);
-
-        if (stage_ == CrowdsaleStage.GuaranteedSpot) {
-            require(isGuaranteedSpotWhitelisted, 'UltiCrowdsale: beneficiary is not on whitelist');
-        } else {
-            require(
-                isGuaranteedSpotWhitelisted || isCrowdsaleWhitelisted,
-                'UltiCrowdsale: beneficiary is not on whitelist'
             );
         }
     }
