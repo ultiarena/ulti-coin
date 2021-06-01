@@ -9,7 +9,7 @@ import {
   CROWDSALE_SUPPLY,
   ZERO_ADDRESS,
   MAX_SUPPLY,
-  GUARANTEED_SPOT_WHITELIST
+  GUARANTEED_SPOT_WHITELIST,
 } from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { keccak256 } from 'ethers/lib/utils'

@@ -111,7 +111,7 @@ abstract contract PostVestingCrowdsale is TimedCrowdsale {
      * @dev Releases the token in an amount that is left to withdraw up to the current time.
      * @param beneficiary Tokens beneficiary.
      */
-    function _releaseTokens(address beneficiary) internal {
+    function _releaseTokens(address beneficiary) internal nonReentrant {
         require(hasClosed(), 'PostVestingCrowdsale: not closed');
         require(
             _balances[beneficiary] - _released[beneficiary] > 0,
