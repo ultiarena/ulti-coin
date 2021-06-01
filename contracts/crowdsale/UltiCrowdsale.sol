@@ -101,6 +101,10 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         return _weiContributed[account];
     }
 
+    function weiRaisedInStage(CrowdsaleStage stage_) public view returns (uint256) {
+        return _stages[stage_].weiRaised;
+    }
+
     function burn(uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
         require(hasClosed(), 'UltiCrowdsale: crowdsale not closed');
         uint256 crowdsaleBalance = token().balanceOf(address(this));
