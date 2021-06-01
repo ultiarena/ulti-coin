@@ -9,19 +9,31 @@ import './TimedCrowdsale.sol';
  * @dev Crowdsale that start tokens vesting after the sale.
  */
 abstract contract PostVestingCrowdsale is TimedCrowdsale {
+    // Token amount bought by each beneficiary
     mapping(address => uint256) private _balances;
-
+    // Token amount released by each beneficiary
     mapping(address => uint256) private _released;
 
     // Number of tokens sold
     uint256 private _tokensSold;
-
+    // Number of tokens released
     uint256 private _tokensReleased;
 
+    // Cliff timestamp
     uint256 private _cliff;
+    // Vesting start timestamp
     uint256 private _start;
+    // Vesting duration in seconds
     uint256 private _duration;
+    // Percent of releasable tokens at the vesting start
     uint256 private _initialPercent;
+
+    /**
+     * Event for token release logging
+     * @param beneficiary who got the tokens
+     * @param amount amount of tokens released
+     */
+    event TokensReleased(address indexed beneficiary, uint256 amount);
 
     constructor(
         uint256 startOffset_,
@@ -37,27 +49,40 @@ abstract contract PostVestingCrowdsale is TimedCrowdsale {
         _initialPercent = initialPercent_;
     }
 
+    /**
+     * @return timestamp of the start of the vesting process
+     */
     function vestingStart() public view returns (uint256) {
         return _start;
     }
 
+    /**
+     * @return timestamp of the vesting process cliff
+     */
     function vestingCliff() public view returns (uint256) {
         return _cliff;
     }
 
+    /**
+     * @return timestamp of the end of the vesting process
+     */
     function vestingEnd() public view returns (uint256) {
         return _start + _duration;
     }
 
+    /**
+     * @return true if the process of vesting is ended
+     */
     function isVestingEnded() public view returns (bool) {
         return block.timestamp >= vestingEnd();
     }
 
     /**
-     * @return the balance of an account.
+     * @param beneficiary Tokens beneficiary.
+     * @return the number of tokens bought by beneficiary.
      */
-    function tokensBought(address account) public view returns (uint256) {
-        return _balances[account];
+    function tokensBought(address beneficiary) public view returns (uint256) {
+        return _balances[beneficiary];
     }
 
     /**
@@ -67,17 +92,24 @@ abstract contract PostVestingCrowdsale is TimedCrowdsale {
         return _tokensSold;
     }
 
+    /**
+     * @return the number of tokens released.
+     */
     function tokensReleased() public view returns (uint256) {
         return _tokensReleased;
     }
 
+    /**
+     * @param beneficiary Tokens beneficiary.
+     * @return the number of tokens that is possible to release by beneficiary.
+     */
     function releasableAmount(address beneficiary) public view returns (uint256) {
         return _vestedAmount(beneficiary) - _released[beneficiary];
     }
 
     /**
-     * @dev after crowdsale ends it releases tokens from vesting.
-     * @param beneficiary Whose tokens will be withdrawn.
+     * @dev Releases the token in an amount that is left to withdraw up to the current time.
+     * @param beneficiary Tokens beneficiary.
      */
     function _releaseTokens(address beneficiary) internal {
         require(hasClosed(), 'PostVestingCrowdsale: not closed');
@@ -90,8 +122,15 @@ abstract contract PostVestingCrowdsale is TimedCrowdsale {
         _released[beneficiary] = _released[beneficiary] + amount;
         _tokensReleased += amount;
         _deliverTokens(beneficiary, amount);
+        emit TokensReleased(beneficiary, amount);
     }
 
+    /**
+     * @dev Calculates the vested amount of the token which is the total number of tokens
+     * that can be released up to the current time.
+     * @param beneficiary Tokens beneficiary.
+     * @return the number of vested tokens.
+     */
     function _vestedAmount(address beneficiary) internal view returns (uint256) {
         uint256 lastBlockTimestamp = block.timestamp;
         if (block.timestamp < _cliff) {
@@ -104,10 +143,8 @@ abstract contract PostVestingCrowdsale is TimedCrowdsale {
     }
 
     /**
-     * @dev Overrides parent by storing due balances, and delivering tokens to the vault instead of the end user. This
-     * ensures that the tokens will be available by the time they are withdrawn (which may not be the case if
-     * `_deliverTokens` was called later).
-     * @param beneficiary Token purchaser
+     * @dev Overrides parent by storing due balances and updating total number of sold tokens.
+     * @param beneficiary Token beneficiary
      * @param tokenAmount Amount of tokens purchased
      */
     function _processPurchase(address beneficiary, uint256 tokenAmount) internal virtual override {
