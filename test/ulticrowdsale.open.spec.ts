@@ -3,7 +3,7 @@ import { ethers } from 'hardhat'
 import { UltiCoinUnswappable__factory, UltiCrowdsale, UltiCrowdsale__factory } from '../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
-import { CROWDSALE_SUPPLY, OPENING_TIME, Stages, stagesData, ZERO_ADDRESS } from './common'
+import { CROWDSALE_SUPPLY, KYCED_WHITELIST, OPENING_TIME, Stages, stagesData, ZERO_ADDRESS } from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 use(solidity)
@@ -120,41 +120,46 @@ describe('UltiCrowdsale time dependent', () => {
           })
         })
 
-        if (stageData.wrongWhitelist !== undefined) {
+        if (stageData.wrongWhitelist !== undefined && stageData.wrongWhitelist.length > 0) {
           const stageWhitelist = utils.keccak256(Buffer.from(stageData.whitelists?.[0] as string))
-          const stageWrongWhitelist = utils.keccak256(Buffer.from(stageData.wrongWhitelist))
-          context(`for whitelisted on ${stageData.wrongWhitelist}`, async function () {
-            beforeEach(async function () {
-              await this.crowdsale
-                .connect(admin)
-                .bulkAddToWhitelist(stageWrongWhitelist, [purchaser.address, investor.address])
 
-              await expect(
-                await this.crowdsale.connect(admin).isWhitelisted(stageWrongWhitelist, investor.address)
-              ).to.be.true
+          stageData.wrongWhitelist?.forEach(function (wrongWhitelist) {
+            const stageWrongWhitelist = utils.keccak256(Buffer.from(wrongWhitelist))
+            context(`for whitelisted on ${wrongWhitelist}`, async function () {
+              beforeEach(async function () {
+                await this.crowdsale
+                  .connect(admin)
+                  .bulkAddToWhitelist(stageWrongWhitelist, [purchaser.address, investor.address])
 
-              await expect(
-                await this.crowdsale.connect(admin).isWhitelisted(stageWhitelist, investor.address)
-              ).to.be.false
-            })
-
-            it('reverts on tokens release', async function () {
-              await expect(this.crowdsale.connect(purchaser).releaseTokens(investor.address)).to.be.revertedWith(
-                'PostVestingCrowdsale: not closed'
-              )
-            })
-
-            describe('accepting payments', function () {
-              it('reverts on positive payments', async function () {
                 await expect(
-                  purchaser.sendTransaction({ to: this.crowdsale.address, value: value })
-                ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on whitelist`)
+                  await this.crowdsale.connect(admin).isWhitelisted(stageWrongWhitelist, investor.address)
+                ).to.be.true
+
+                await expect(
+                  await this.crowdsale.connect(admin).isWhitelisted(stageWhitelist, investor.address)
+                ).to.be.false
               })
 
-              it('reverts on tokens purchase', async function () {
-                await expect(
-                  this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
-                ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on whitelist`)
+              if (wrongWhitelist != KYCED_WHITELIST) {
+                it('reverts on tokens release', async function () {
+                  await expect(this.crowdsale.connect(purchaser).releaseTokens(investor.address)).to.be.revertedWith(
+                    'UltiCrowdsale: beneficiary is not on whitelist'
+                  )
+                })
+              }
+
+              describe('accepting payments', function () {
+                it('reverts on positive payments', async function () {
+                  await expect(
+                    purchaser.sendTransaction({ to: this.crowdsale.address, value: value })
+                  ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on whitelist`)
+                })
+
+                it('reverts on tokens purchase', async function () {
+                  await expect(
+                    this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
+                  ).to.be.revertedWith(`UltiCrowdsale: beneficiary is not on whitelist`)
+                })
               })
             })
           })

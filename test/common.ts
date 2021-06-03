@@ -41,7 +41,8 @@ enum Stages {
 const OPENING_TIME = 1623427200
 const CLOSING_TIME = 1631451600
 const GUARANTEED_SPOT_WHITELIST = 'GUARANTEED_SPOT_WHITELIST'
-const CROWDSALE_WHITELIST = 'CROWDSALE_WHITELIST'
+const PRIVATE_SALE_WHITELIST = 'PRIVATE_SALE_WHITELIST'
+const KYCED_WHITELIST = 'KYCED_WHITELIST'
 
 const MINIMAL_CONTRIBUTION = utils.parseEther('0.5')
 const MAXIMAL_CONTRIBUTION = utils.parseEther('5')
@@ -58,7 +59,7 @@ type StageData = {
   cap: BigNumberish
   startCap: BigNumberish
   whitelists?: string[]
-  wrongWhitelist?: string
+  wrongWhitelist?: string[]
   minContribution?: BigNumber
   maxContribution?: BigNumber
 }
@@ -78,7 +79,7 @@ const stagesData: StageData[] = [
     cap: utils.parseEther('2500'),
     startCap: 0,
     whitelists: [GUARANTEED_SPOT_WHITELIST],
-    wrongWhitelist: CROWDSALE_WHITELIST,
+    wrongWhitelist: [PRIVATE_SALE_WHITELIST, KYCED_WHITELIST],
     minContribution: MINIMAL_CONTRIBUTION,
     maxContribution: MAXIMAL_CONTRIBUTION,
   },
@@ -88,7 +89,8 @@ const stagesData: StageData[] = [
     bonus: 30,
     cap: utils.parseEther('2500'),
     startCap: 0,
-    whitelists: [CROWDSALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
+    whitelists: [PRIVATE_SALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
+    wrongWhitelist: [KYCED_WHITELIST],
     minContribution: MINIMAL_CONTRIBUTION,
     maxContribution: MAXIMAL_CONTRIBUTION,
   },
@@ -98,7 +100,8 @@ const stagesData: StageData[] = [
     bonus: 10,
     cap: utils.parseEther('3500'),
     startCap: utils.parseEther('2500'),
-    whitelists: [CROWDSALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
+    whitelists: [KYCED_WHITELIST],
+    wrongWhitelist: [PRIVATE_SALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
   },
   {
     closeTimestamp: 1627142400,
@@ -106,7 +109,8 @@ const stagesData: StageData[] = [
     bonus: 5,
     cap: utils.parseEther('6000'),
     startCap: utils.parseEther('6000'),
-    whitelists: [CROWDSALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
+    whitelists: [KYCED_WHITELIST],
+    wrongWhitelist: [PRIVATE_SALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
   },
   {
     closeTimestamp: 1628352000,
@@ -114,7 +118,8 @@ const stagesData: StageData[] = [
     bonus: 3,
     cap: utils.parseEther('9000'),
     startCap: utils.parseEther('12000'),
-    whitelists: [CROWDSALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
+    whitelists: [KYCED_WHITELIST],
+    wrongWhitelist: [PRIVATE_SALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
   },
   {
     closeTimestamp: 1629561600,
@@ -122,7 +127,8 @@ const stagesData: StageData[] = [
     bonus: 0,
     cap: utils.parseEther('12500'),
     startCap: utils.parseEther('21000'),
-    whitelists: [CROWDSALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
+    whitelists: [KYCED_WHITELIST],
+    wrongWhitelist: [PRIVATE_SALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
   },
   {
     closeTimestamp: 1631451600,
@@ -130,7 +136,8 @@ const stagesData: StageData[] = [
     bonus: 0,
     cap: utils.parseEther('16500'),
     startCap: utils.parseEther('33500'),
-    whitelists: [CROWDSALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
+    whitelists: [KYCED_WHITELIST],
+    wrongWhitelist: [PRIVATE_SALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
   },
 ]
 
@@ -142,7 +149,7 @@ export {
   Stages,
   OPENING_TIME,
   CLOSING_TIME,
-  CROWDSALE_WHITELIST,
+  PRIVATE_SALE_WHITELIST,
   GUARANTEED_SPOT_WHITELIST,
   CROWDSALE_SUPPLY,
   MINIMAL_CONTRIBUTION,
@@ -150,6 +157,7 @@ export {
   NAME,
   SYMBOL,
   DECIMALS,
+  KYCED_WHITELIST,
   VESTING_DURATION,
   VESTING_CLIFF_DURATION,
   VESTING_INITIAL_PERCENT,
