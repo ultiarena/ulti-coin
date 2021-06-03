@@ -1,9 +1,9 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCrowdsale__factory, UltiCoinUnswappable__factory, UltiCrowdsale } from '../typechain'
+import { UltiCoinUnswappable__factory, UltiCrowdsale, UltiCrowdsale__factory } from '../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
-import { stagesData, OPENING_TIME, Stages, CROWDSALE_SUPPLY, ZERO_ADDRESS } from './common'
+import { CROWDSALE_SUPPLY, OPENING_TIME, Stages, stagesData, ZERO_ADDRESS } from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 use(solidity)
@@ -89,12 +89,13 @@ describe('UltiCrowdsale time dependent', () => {
         })
 
         context('for not whitelisted', async function () {
+          const stageWhitelist = utils.keccak256(Buffer.from(stageData.whitelists?.[0] as string))
           beforeEach(async function () {
             await expect(
-              await this.crowdsale.connect(admin).isWhitelisted(stageData.whitelists?.[0], purchaser.address)
+              await this.crowdsale.connect(admin).isWhitelisted(stageWhitelist, purchaser.address)
             ).to.be.false
             await expect(
-              await this.crowdsale.connect(admin).isWhitelisted(stageData.whitelists?.[0], investor.address)
+              await this.crowdsale.connect(admin).isWhitelisted(stageWhitelist, investor.address)
             ).to.be.false
           })
 
@@ -120,18 +121,20 @@ describe('UltiCrowdsale time dependent', () => {
         })
 
         if (stageData.wrongWhitelist !== undefined) {
+          const stageWhitelist = utils.keccak256(Buffer.from(stageData.whitelists?.[0] as string))
+          const stageWrongWhitelist = utils.keccak256(Buffer.from(stageData.wrongWhitelist))
           context(`for whitelisted on ${stageData.wrongWhitelist}`, async function () {
             beforeEach(async function () {
               await this.crowdsale
                 .connect(admin)
-                .bulkAddToWhitelist(stageData.wrongWhitelist, [purchaser.address, investor.address])
+                .bulkAddToWhitelist(stageWrongWhitelist, [purchaser.address, investor.address])
 
               await expect(
-                await this.crowdsale.connect(admin).isWhitelisted(stageData.wrongWhitelist, investor.address)
+                await this.crowdsale.connect(admin).isWhitelisted(stageWrongWhitelist, investor.address)
               ).to.be.true
 
               await expect(
-                await this.crowdsale.connect(admin).isWhitelisted(stageData.whitelists?.[0], investor.address)
+                await this.crowdsale.connect(admin).isWhitelisted(stageWhitelist, investor.address)
               ).to.be.false
             })
 
@@ -167,7 +170,7 @@ describe('UltiCrowdsale time dependent', () => {
               r.push(e)
             return r
           }, stagePurchaseValues)
-
+          const stageWhitelist = utils.keccak256(Buffer.from(whitelist))
           context(`for whitelisted on ${whitelist}`, async function () {
             describe('accepting payments', function () {
               const purchaseTokenAmount = value.mul(stageData.rate)
@@ -175,7 +178,9 @@ describe('UltiCrowdsale time dependent', () => {
               const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
               beforeEach(async function () {
-                await this.crowdsale.connect(admin).bulkAddToWhitelist(whitelist, [purchaser.address, investor.address])
+                await this.crowdsale
+                  .connect(admin)
+                  .bulkAddToWhitelist(stageWhitelist, [purchaser.address, investor.address])
               })
 
               describe('bare payments', function () {

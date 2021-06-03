@@ -29,6 +29,9 @@ describe('UltiCrowdsale', () => {
   let tokenFactory: UltiCoinUnswappable__factory
   let crowdsaleFactory: UltiCrowdsale__factory
 
+  const guaranteedSpotWhitelistBytes = keccak256(Buffer.from(GUARANTEED_SPOT_WHITELIST))
+  const crowdsaleWhitelistBytes = keccak256(Buffer.from(CROWDSALE_WHITELIST))
+
   before(async () => {
     await ethers.provider.send('hardhat_reset', [])
   })
@@ -63,7 +66,7 @@ describe('UltiCrowdsale', () => {
     context('once deployed and not yet open', async function () {
       beforeEach(async function () {
         this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
-        await this.crowdsale.connect(admin).addToWhitelist(GUARANTEED_SPOT_WHITELIST, investor.address)
+        await this.crowdsale.connect(admin).addToWhitelist(guaranteedSpotWhitelistBytes, investor.address)
         await this.token.connect(wallet).transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
         expect(await this.token.balanceOf(this.crowdsale.address)).to.equal(CROWDSALE_SUPPLY)
       })
@@ -124,23 +127,23 @@ describe('UltiCrowdsale', () => {
         context('addToWhitelist', async function () {
           it('reverts when not called by admin', async function () {
             await expect(
-              this.crowdsale.connect(purchaser).addToWhitelist(CROWDSALE_WHITELIST, investor.address)
+              this.crowdsale.connect(purchaser).addToWhitelist(crowdsaleWhitelistBytes, investor.address)
             ).to.be.revertedWith(
               `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
             )
           })
 
           it('adds address to whitelist', async function () {
-            await this.crowdsale.connect(admin).addToWhitelist(CROWDSALE_WHITELIST, investor.address)
+            await this.crowdsale.connect(admin).addToWhitelist(crowdsaleWhitelistBytes, investor.address)
             await expect(
-              await this.crowdsale.connect(admin).isWhitelisted(CROWDSALE_WHITELIST, investor.address)
+              await this.crowdsale.connect(admin).isWhitelisted(crowdsaleWhitelistBytes, investor.address)
             ).to.be.true
           })
 
           it('should log whitelisting', async function () {
-            await expect(this.crowdsale.connect(admin).addToWhitelist(CROWDSALE_WHITELIST, investor.address))
+            await expect(this.crowdsale.connect(admin).addToWhitelist(crowdsaleWhitelistBytes, investor.address))
               .to.emit(this.crowdsale, 'WhitelistAdded')
-              .withArgs(keccak256(Buffer.from(CROWDSALE_WHITELIST)), investor.address)
+              .withArgs(crowdsaleWhitelistBytes, investor.address)
           })
         })
 
@@ -154,44 +157,44 @@ describe('UltiCrowdsale', () => {
 
           it('reverts when not called by admin', async function () {
             await expect(
-              this.crowdsale.connect(purchaser).bulkAddToWhitelist(CROWDSALE_WHITELIST, addresses)
+              this.crowdsale.connect(purchaser).bulkAddToWhitelist(crowdsaleWhitelistBytes, addresses)
             ).to.be.revertedWith(
               `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
             )
           })
 
           it('adds addresses to whitelist', async function () {
-            await this.crowdsale.connect(admin).bulkAddToWhitelist(CROWDSALE_WHITELIST, addresses)
+            await this.crowdsale.connect(admin).bulkAddToWhitelist(crowdsaleWhitelistBytes, addresses)
             for (let address of addresses) {
-              await expect(await this.crowdsale.isWhitelisted(CROWDSALE_WHITELIST, address)).to.be.true
+              await expect(await this.crowdsale.isWhitelisted(crowdsaleWhitelistBytes, address)).to.be.true
             }
           })
         })
 
         context('removeFromWhitelist', async function () {
           beforeEach(async function () {
-            await this.crowdsale.connect(admin).addToWhitelist(CROWDSALE_WHITELIST, investor.address)
+            await this.crowdsale.connect(admin).addToWhitelist(crowdsaleWhitelistBytes, investor.address)
           })
 
           it('reverts when not called by admin', async function () {
             await expect(
-              this.crowdsale.connect(purchaser).removeFromWhitelist(CROWDSALE_WHITELIST, investor.address)
+              this.crowdsale.connect(purchaser).removeFromWhitelist(crowdsaleWhitelistBytes, investor.address)
             ).to.be.revertedWith(
               `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
             )
           })
 
           it('removes address from whitelist', async function () {
-            await this.crowdsale.connect(admin).removeFromWhitelist(CROWDSALE_WHITELIST, investor.address)
+            await this.crowdsale.connect(admin).removeFromWhitelist(crowdsaleWhitelistBytes, investor.address)
             await expect(
-              await this.crowdsale.connect(admin).isWhitelisted(CROWDSALE_WHITELIST, investor.address)
+              await this.crowdsale.connect(admin).isWhitelisted(crowdsaleWhitelistBytes, investor.address)
             ).to.be.false
           })
 
           it('should log removing from whitelist', async function () {
-            await expect(this.crowdsale.connect(admin).removeFromWhitelist(CROWDSALE_WHITELIST, investor.address))
+            await expect(this.crowdsale.connect(admin).removeFromWhitelist(crowdsaleWhitelistBytes, investor.address))
               .to.emit(this.crowdsale, 'WhitelistRemoved')
-              .withArgs(keccak256(Buffer.from(CROWDSALE_WHITELIST)), investor.address)
+              .withArgs(crowdsaleWhitelistBytes, investor.address)
           })
         })
       })

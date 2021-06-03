@@ -14,10 +14,10 @@ import {
   VESTING_START_OFFSET,
   VESTING_CLIFF_DURATION,
   VESTING_DURATION,
-  GUARANTEED_SPOT_WHITELIST,
   CROWDSALE_WHITELIST,
 } from './common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { keccak256 } from 'ethers/lib/utils'
 
 use(solidity)
 
@@ -32,6 +32,8 @@ describe('UltiCrowdsale', () => {
 
   let tokenFactory: UltiCoinUnswappable__factory
   let crowdsaleFactory: UltiCrowdsale__factory
+
+  const crowdsaleWhitelistBytes = keccak256(Buffer.from(CROWDSALE_WHITELIST))
 
   beforeEach(async () => {
     ;[deployer, admin, wallet, investor, other_investor, purchaser, ...addrs] = await ethers.getSigners()
@@ -61,7 +63,7 @@ describe('UltiCrowdsale', () => {
 
     await crowdsale
       .connect(admin)
-      .bulkAddToWhitelist(CROWDSALE_WHITELIST, [investor.address, other_investor.address, purchaser.address])
+      .bulkAddToWhitelist(crowdsaleWhitelistBytes, [investor.address, other_investor.address, purchaser.address])
     await crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
     expect(await crowdsale.tokensBought(investor.address)).to.be.equal(expectedTokenAmount)
 
