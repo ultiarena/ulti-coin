@@ -79,6 +79,12 @@ describe('UltiCrowdsale', () => {
     await ethers.provider.send('evm_mine', [])
   }
 
+  const daysAfterCliff = [10, 15, 25, 30, 43, 67, 89]
+  const dailyIncreasePercent = 1
+  const deltaLow = BigNumber.from(99999)
+  const deltaHigh = BigNumber.from(100001)
+  const deltaDenominator = BigNumber.from(100000)
+
   context('once deployed and closed', async function () {
     beforeEach(async function () {
       await ethers.provider.send('hardhat_reset', [])
@@ -194,12 +200,6 @@ describe('UltiCrowdsale', () => {
         })
       })
 
-      const daysAfterCliff = [10, 15, 25, 30, 43, 67, 89]
-      const dailyIncreasePercent = 1
-      const deltaLow = BigNumber.from(999999)
-      const deltaHigh = BigNumber.from(1000001)
-      const deltaDenominator = BigNumber.from(1000000)
-
       daysAfterCliff.forEach(function (days) {
         describe(`${days} days after cliff`, async function () {
           describe('releaseTokens', async function () {
@@ -292,7 +292,7 @@ describe('UltiCrowdsale', () => {
     })
   })
 
-  context('during vesting', async function () {
+  context('post vesting delivery', async function () {
     before(async function () {
       await ethers.provider.send('hardhat_reset', [])
       this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
@@ -306,36 +306,139 @@ describe('UltiCrowdsale', () => {
     }
 
     describe('sequence of actions', async function () {
-      it('crowdsale has closed', async function () {
+      it('pre checks', async function () {
         expect(await this.crowdsale.hasClosed()).to.be.true
-      })
-      it(`has ${expectedTokenAmount.mul(4)} tokens sold`, async function () {
         expect(await this.crowdsale.tokensSold()).to.be.eq(expectedTokenAmount.mul(4))
       })
 
-      describe('before cliff', async function () {
-        before(async function () {
-          const cliff = await this.crowdsale.vestingCliff()
-          await mineToTimestamp(cliff.toNumber() - 1000)
-        })
+      let totalReleasedAmount = BigNumber.from(0)
 
-        const expectedReleasableTokens = expectedTokenAmount.mul(VESTING_INITIAL_PERCENT).div(100)
-        it(`should return ${expectedReleasableTokens} releasable tokens`, async function () {
-          expect(await this.crowdsale.releasableAmount(investor.address)).to.be.equal(expectedReleasableTokens)
-        })
+      it('release and transfers', async function () {
+        console.log('        before cliff')
+        const cliff = await this.crowdsale.vestingCliff()
+        await mineToTimestamp(cliff.toNumber() - 1000)
 
-        it(`should transfer ${expectedReleasableTokens} tokens to beneficiary`, async function () {
+        let expectedReleasableTokens = expectedTokenAmount.mul(VESTING_INITIAL_PERCENT).div(100)
+        console.log(
+          `          - releasableAmount() should return ${utils
+            .formatEther(expectedReleasableTokens)
+            .toString()} releasable tokens`
+        )
+        expect(await this.crowdsale.releasableAmount(investor.address)).to.be.equal(expectedReleasableTokens)
+
+        console.log(
+          `          - releaseTokens() should transfer ${utils
+            .formatEther(expectedReleasableTokens)
+            .toString()} tokens to beneficiary`
+        )
+        await this.crowdsale.releaseTokens(investor.address)
+        expect(await this.token.balanceOf(investor.address)).to.be.equal(expectedReleasableTokens)
+        totalReleasedAmount = totalReleasedAmount.add(expectedReleasableTokens)
+
+        console.log(`          - releasableAmount() should return ZERO releasable tokens`)
+        expect(await this.crowdsale.releasableAmount(investor.address)).to.be.equal(0)
+
+        console.log(
+          `          - tokensReleased() should return ${utils
+            .formatEther(totalReleasedAmount)
+            .toString()} released tokens`
+        )
+        expect(await this.crowdsale.tokensReleased()).to.be.equal(totalReleasedAmount)
+
+        for (let days of daysAfterCliff) {
+          console.log(`        ${days} days after cliff`)
+          const daysSeconds = days * 24 * 60 * 60
+          const newTimestamp = cliff.toNumber() + daysSeconds
+          await mineToTimestamp(Number(newTimestamp))
+
+          const vestedPercentage = VESTING_INITIAL_PERCENT + days * dailyIncreasePercent
+          const vestedAmount = expectedTokenAmount.mul(vestedPercentage).div(100)
+          const amountToRelease = vestedAmount.sub(totalReleasedAmount)
+
+          console.log(
+            `          - releasableAmount() should return ${utils
+              .formatEther(amountToRelease)
+              .toString()} releasable tokens`
+          )
+          const releasableAmount = await this.crowdsale.releasableAmount(investor.address)
+          expect(releasableAmount).to.be.gte(amountToRelease.mul(deltaLow).div(deltaDenominator))
+          expect(releasableAmount).to.be.lte(amountToRelease.mul(deltaHigh).div(deltaDenominator))
+
+          console.log(
+            `          - releaseTokens() should transfer approximately ${utils
+              .formatEther(amountToRelease)
+              .toString()} tokens to beneficiary`
+          )
+
+          const balanceBefore = await this.token.balanceOf(investor.address)
           await this.crowdsale.releaseTokens(investor.address)
-          expect(await this.token.balanceOf(investor.address)).to.be.equal(expectedReleasableTokens)
-        })
+          const balanceAfter = await this.token.balanceOf(investor.address)
+          const balanceDelta = balanceAfter.sub(balanceBefore)
+          expect(balanceDelta).to.be.gte(amountToRelease.mul(deltaLow).div(deltaDenominator))
+          expect(balanceDelta).to.be.lte(amountToRelease.mul(deltaHigh).div(deltaDenominator))
+          totalReleasedAmount = totalReleasedAmount.add(balanceDelta)
 
-        it(`should return ZERO releasable tokens`, async function () {
+          console.log(`          - releasableAmount() should return ZERO releasable tokens`)
           expect(await this.crowdsale.releasableAmount(investor.address)).to.be.equal(0)
-        })
 
-        it(`should return ${expectedReleasableTokens} released tokens`, async function () {
-          expect(await this.crowdsale.tokensReleased()).to.be.equal(expectedReleasableTokens)
-        })
+          console.log(
+            `          - tokensReleased() should return ${utils
+              .formatEther(totalReleasedAmount)
+              .toString()} released tokens`
+          )
+          expect(await this.crowdsale.tokensReleased()).to.be.equal(totalReleasedAmount)
+        }
+
+        console.log('        after vesting ends')
+        const end = await this.crowdsale.vestingEnd()
+        await mineToTimestamp(end.toNumber() + 1)
+
+        expectedReleasableTokens = expectedTokenAmount.sub(totalReleasedAmount)
+        console.log(
+          `          - releasableAmount() should return ${utils
+            .formatEther(expectedReleasableTokens)
+            .toString()} releasable tokens`
+        )
+        expect(await this.crowdsale.releasableAmount(investor.address)).to.be.equal(expectedReleasableTokens)
+
+        console.log(
+          `          - releaseTokens() should transfer approximately ${utils
+            .formatEther(expectedReleasableTokens)
+            .toString()} tokens to beneficiary`
+        )
+
+        const balanceBefore = await this.token.balanceOf(investor.address)
+        await this.crowdsale.releaseTokens(investor.address)
+        const balanceAfter = await this.token.balanceOf(investor.address)
+        const balanceDelta = balanceAfter.sub(balanceBefore)
+        expect(balanceDelta).to.be.gte(expectedReleasableTokens.mul(deltaLow).div(deltaDenominator))
+        expect(balanceDelta).to.be.lte(expectedReleasableTokens.mul(deltaHigh).div(deltaDenominator))
+        totalReleasedAmount = totalReleasedAmount.add(balanceDelta)
+
+        console.log(`          - releasableAmount() should return ZERO releasable tokens`)
+        expect(await this.crowdsale.releasableAmount(investor.address)).to.be.equal(0)
+
+        console.log(
+          `          - tokensReleased() should return ${utils
+            .formatEther(totalReleasedAmount)
+            .toString()} released tokens`
+        )
+        expect(await this.crowdsale.tokensReleased()).to.be.equal(totalReleasedAmount)
+
+        console.log(
+          `          - total released should be equal bought tokens of ${utils
+            .formatEther(expectedTokenAmount)
+            .toString()}`
+        )
+        expect(totalReleasedAmount).to.be.equal(expectedTokenAmount)
+
+        console.log(
+          `          - beneficiary balance should be equal bought and released tokens of ${utils
+            .formatEther(expectedTokenAmount)
+            .toString()}`
+        )
+        expect(await this.token.balanceOf(investor.address)).to.be.equal(expectedTokenAmount)
+        expect(await this.token.balanceOf(investor.address)).to.be.equal(totalReleasedAmount)
       })
     })
   })
