@@ -133,7 +133,9 @@ abstract contract PostVestingCrowdsale is TimedCrowdsale {
      */
     function _vestedAmount(address beneficiary) internal view returns (uint256) {
         uint256 lastBlockTimestamp = block.timestamp;
-        if (block.timestamp < _cliff) {
+        if (block.timestamp < closingTime()) {
+            return 0;
+        } else if (block.timestamp < _cliff) {
             return (_balances[beneficiary] * _initialPercent) / 100;
         } else if (lastBlockTimestamp >= vestingEnd()) {
             return _balances[beneficiary];
