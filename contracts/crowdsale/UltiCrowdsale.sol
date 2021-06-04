@@ -133,12 +133,12 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         if (stage_ == CrowdsaleStage.GuaranteedSpot || stage_ == CrowdsaleStage.PrivateSale) {
             // Check if beneficiary is whitelisted
             bool isGuaranteedSpotWhitelisted = _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary);
-            bool isCrowdsaleWhitelisted = _isWhitelisted(PRIVATE_SALE_WHITELIST, beneficiary);
+            bool isPrivateSaleWhitelisted = _isWhitelisted(PRIVATE_SALE_WHITELIST, beneficiary);
             if (stage_ == CrowdsaleStage.GuaranteedSpot) {
                 require(isGuaranteedSpotWhitelisted, 'UltiCrowdsale: beneficiary is not on whitelist');
             } else {
                 require(
-                    isGuaranteedSpotWhitelisted || isCrowdsaleWhitelisted,
+                    isGuaranteedSpotWhitelisted || isPrivateSaleWhitelisted,
                     'UltiCrowdsale: beneficiary is not on whitelist'
                 );
             }
