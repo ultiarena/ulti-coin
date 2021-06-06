@@ -17,6 +17,8 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         uint256 bonus;
         uint256 cap;
         uint256 startCap;
+        uint256 minContribution;
+        uint256 maxContribution;
         uint256 weiRaised;
     }
 
@@ -45,24 +47,23 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         Crowdsale(1, wallet_, token_)
         TimedCrowdsale(OPENING_TIME, CLOSING_TIME)
         PostVestingCrowdsale(VESTING_START_OFFSET, VESTING_CLIFF_DURATION, VESTING_DURATION, VESTING_INITIAL_PERCENT)
+        WhitelistAccess()
     {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
-        _setupCrowdsaleStage(CrowdsaleStage.Inactive, 0, 0, 0, 0, 0);
-        // closing: 12-06-2021 16:00 UTC, price: 0.00000019 BNB, bonus: 30%, cap: 2500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.GuaranteedSpot, 1623513600, 4000000, 30, 2500 * 1e18, 0);
-        // closing: 26-06-2021 16:00 UTC, price: 0.00000019 BNB, bonus: 30%, cap: 2500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.PrivateSale, 1624723200, 4000000, 30, 2500 * 1e18, 0);
-        // closing: 10-07-2021 16:00 UTC, price: 0.00000045 BNB, bonus: 10%, cap: 3500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale1, 1625932800, 2000000, 10, 3500 * 1e18, 2500 * 1e18);
-        // closing: 24-07-2021 16:00 UTC, price: 0.00000071 BNB, bonus: 5%, cap: 6000 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale2, 1627142400, 1333333, 5, 6000 * 1e18, 6000 * 1e18);
-        // closing: 07-08-2021 16:00 UTC, price: 0.00000097 BNB, bonus: 3%, cap: 9000 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale3, 1628352000, 1000000, 3, 9000 * 1e18, 12000 * 1e18);
-        // closing: 21-08-2021 16:00 UTC, price: 0.00000125 BNB, bonus: 0%, cap: 12500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale4, 1629561600, 800000, 0, 12500 * 1e18, 21000 * 1e18);
-        // closing: 12-09-2021 13:00 UTC, price: 0.00000150 BNB, bonus: 0%, cap: 16500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale5, 1631451600, 666667, 0, 16500 * 1e18, 33500 * 1e18);
+        _setupStage(CrowdsaleStage.Inactive, 0, 0, 0, 0, 0, 0, 0);
+        // closing: 12-06-2021 16:00 UTC, price: 0.00000019 BNB, bonus: 30%, cap: 2500 BNB, min: 0.5 BNB, max: 5 BNB
+        _setupStage(CrowdsaleStage.GuaranteedSpot, 1623513600, 4000000, 30, 2500 * 1e18, 0, 5 * 1e17, 5 * 1e18);
+        // closing: 26-06-2021 16:00 UTC, price: 0.00000019 BNB, bonus: 30%, cap: 2500 BNB, min: 0.5 BNB, max: 5 BNB
+        _setupStage(CrowdsaleStage.PrivateSale, 1624723200, 4000000, 30, 2500 * 1e18, 0, 5 * 1e17, 5 * 1e18);
+        // closing: 10-07-2021 16:00 UTC, price: 0.00000045 BNB, bonus: 10%, cap: 3500 BNB, min: 1 BNB, max: 10 BNB
+        _setupStage(CrowdsaleStage.Presale1, 1625932800, 2000000, 10, 3500 * 1e18, 2500 * 1e18, 1 * 1e18, 10 * 1e18);
+        // closing: 24-07-2021 16:00 UTC, price: 0.00000071 BNB, bonus: 5%, cap: 6000 BNB, min: 1 BNB, max: 20 BNB
+        _setupStage(CrowdsaleStage.Presale2, 1627142400, 1333333, 5, 6000 * 1e18, 6000 * 1e18, 1 * 1e18, 20 * 1e18);
+        // closing: 07-08-2021 16:00 UTC, price: 0.00000097 BNB, bonus: 3%, cap: 9000 BNB, min: 1 BNB, max: 30 BNB
+        _setupStage(CrowdsaleStage.Presale3, 1628352000, 1000000, 3, 9000 * 1e18, 12000 * 1e18, 1 * 1e18, 30 * 1e18);
+        // closing: 21-08-2021 16:00 UTC, price: 0.00000125 BNB, bonus: 0%, cap: 12500 BNB, min: 1 BNB, max: 50 BNB
+        _setupStage(CrowdsaleStage.Presale4, 1629561600, 800000, 0, 12500 * 1e18, 21000 * 1e18, 1 * 1e18, 50 * 1e18);
+        // closing: 12-09-2021 13:00 UTC, price: 0.00000150 BNB, bonus: 0%, cap: 16500 BNB, min: 1 BNB, max: 100 BNB
+        _setupStage(CrowdsaleStage.Presale5, 1631451600, 666667, 0, 16500 * 1e18, 33500 * 1e18, 1 * 1e18, 100 * 1e18);
     }
 
     modifier onlyWhileHardcapNotReached() {
@@ -78,12 +79,33 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         _;
     }
 
+    modifier onlyInContributionLimits(address beneficiary, uint256 weiAmount) {
+        require(weiAmount > 0, 'UltiCrowdsale: the value sent is zero');
+        require(
+            _weiContributed[beneficiary] + weiAmount >= minContribution(),
+            'UltiCrowdsale: the value sent is insufficient for the minimal contribution'
+        );
+        require(
+            _weiContributed[beneficiary] + weiAmount <= maxContribution(),
+            'UltiCrowdsale: the value sent exceeds the maximum contribution'
+        );
+        _;
+    }
+
     function rate() public view override(Crowdsale) returns (uint256) {
         return _stages[_currentStage()].rate;
     }
 
     function bonus() public view returns (uint256) {
         return _stages[_currentStage()].bonus;
+    }
+
+    function minContribution() public view returns (uint256) {
+        return _stages[_currentStage()].minContribution;
+    }
+
+    function maxContribution() public view returns (uint256) {
+        return _stages[_currentStage()].maxContribution;
     }
 
     function stage() public view returns (CrowdsaleStage) {
@@ -127,11 +149,12 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         onlyWhileOpen
         onlyWhileHardcapNotReached
         onlyNotExceedsStageCap(weiAmount)
+        onlyInContributionLimits(beneficiary, weiAmount)
     {
         Crowdsale._preValidatePurchase(beneficiary, weiAmount);
+        // Check if beneficiary is whitelisted
         CrowdsaleStage stage_ = _currentStage();
         if (stage_ == CrowdsaleStage.GuaranteedSpot || stage_ == CrowdsaleStage.PrivateSale) {
-            // Check if beneficiary is whitelisted
             bool isGuaranteedSpotWhitelisted = _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary);
             bool isPrivateSaleWhitelisted = _isWhitelisted(PRIVATE_SALE_WHITELIST, beneficiary);
             if (stage_ == CrowdsaleStage.GuaranteedSpot) {
@@ -142,15 +165,6 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
                     'UltiCrowdsale: beneficiary is not on whitelist'
                 );
             }
-            // Check beneficiary contribution
-            require(
-                weiAmount >= MIN_PRIVATE_SALE_CONTRIBUTION,
-                'UltiCrowdsale: value sent is lower than minimal contribution'
-            );
-            require(
-                _weiContributed[beneficiary] + weiAmount <= MAX_PRIVATE_SALE_CONTRIBUTION,
-                'UltiCrowdsale: value sent exceeds beneficiary private sale contribution limit'
-            );
         } else {
             require(_isWhitelisted(KYCED_WHITELIST, beneficiary), 'UltiCrowdsale: beneficiary is not on whitelist');
         }
@@ -198,14 +212,25 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         }
     }
 
-    function _setupCrowdsaleStage(
+    function _setupStage(
         CrowdsaleStage stage_,
         uint256 closingTime_,
         uint256 rate_,
         uint256 bonus_,
         uint256 cap_,
-        uint256 startingCap_
+        uint256 startingCap_,
+        uint256 minContribution_,
+        uint256 maxContribution_
     ) private {
-        _stages[stage_] = CrowdsaleStageData(closingTime_, rate_, bonus_, cap_, startingCap_, 0);
+        _stages[stage_] = CrowdsaleStageData(
+            closingTime_,
+            rate_,
+            bonus_,
+            cap_,
+            startingCap_,
+            minContribution_,
+            maxContribution_,
+            0
+        );
     }
 }
