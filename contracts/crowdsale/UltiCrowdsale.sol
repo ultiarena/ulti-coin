@@ -50,19 +50,19 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
 
         _setupCrowdsaleStage(CrowdsaleStage.Inactive, 0, 0, 0, 0, 0);
         // closing: 12-06-2021 16:00 UTC, price: 0.00000019 BNB, bonus: 30%, cap: 2500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.GuaranteedSpot, 1623513600, 5263157, 30, 2500 * 1e18, 0);
+        _setupCrowdsaleStage(CrowdsaleStage.GuaranteedSpot, 1623513600, 4000000, 30, 2500 * 1e18, 0);
         // closing: 26-06-2021 16:00 UTC, price: 0.00000019 BNB, bonus: 30%, cap: 2500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.PrivateSale, 1624723200, 5263157, 30, 2500 * 1e18, 0);
+        _setupCrowdsaleStage(CrowdsaleStage.PrivateSale, 1624723200, 4000000, 30, 2500 * 1e18, 0);
         // closing: 10-07-2021 16:00 UTC, price: 0.00000045 BNB, bonus: 10%, cap: 3500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale1, 1625932800, 2222222, 10, 3500 * 1e18, 2500 * 1e18);
+        _setupCrowdsaleStage(CrowdsaleStage.Presale1, 1625932800, 2000000, 10, 3500 * 1e18, 2500 * 1e18);
         // closing: 24-07-2021 16:00 UTC, price: 0.00000071 BNB, bonus: 5%, cap: 6000 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale2, 1627142400, 1408450, 5, 6000 * 1e18, 6000 * 1e18);
+        _setupCrowdsaleStage(CrowdsaleStage.Presale2, 1627142400, 1333333, 5, 6000 * 1e18, 6000 * 1e18);
         // closing: 07-08-2021 16:00 UTC, price: 0.00000097 BNB, bonus: 3%, cap: 9000 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale3, 1628352000, 1030927, 3, 9000 * 1e18, 12000 * 1e18);
+        _setupCrowdsaleStage(CrowdsaleStage.Presale3, 1628352000, 1000000, 3, 9000 * 1e18, 12000 * 1e18);
         // closing: 21-08-2021 16:00 UTC, price: 0.00000125 BNB, bonus: 0%, cap: 12500 BNB
         _setupCrowdsaleStage(CrowdsaleStage.Presale4, 1629561600, 800000, 0, 12500 * 1e18, 21000 * 1e18);
         // closing: 12-09-2021 13:00 UTC, price: 0.00000150 BNB, bonus: 0%, cap: 16500 BNB
-        _setupCrowdsaleStage(CrowdsaleStage.Presale5, 1631451600, 666666, 0, 16500 * 1e18, 33500 * 1e18);
+        _setupCrowdsaleStage(CrowdsaleStage.Presale5, 1631451600, 666667, 0, 16500 * 1e18, 33500 * 1e18);
     }
 
     modifier onlyWhileHardcapNotReached() {

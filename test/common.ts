@@ -74,7 +74,7 @@ const stagesData: StageData[] = [
   },
   {
     closeTimestamp: 1623513600,
-    rate: 5263157,
+    rate: 4000000,
     bonus: 30,
     cap: utils.parseEther('2500'),
     startCap: 0,
@@ -85,7 +85,7 @@ const stagesData: StageData[] = [
   },
   {
     closeTimestamp: 1624723200,
-    rate: 5263157,
+    rate: 4000000,
     bonus: 30,
     cap: utils.parseEther('2500'),
     startCap: 0,
@@ -96,7 +96,7 @@ const stagesData: StageData[] = [
   },
   {
     closeTimestamp: 1625932800,
-    rate: 2222222,
+    rate: 2000000,
     bonus: 10,
     cap: utils.parseEther('3500'),
     startCap: utils.parseEther('2500'),
@@ -105,7 +105,7 @@ const stagesData: StageData[] = [
   },
   {
     closeTimestamp: 1627142400,
-    rate: 1408450,
+    rate: 1333333,
     bonus: 5,
     cap: utils.parseEther('6000'),
     startCap: utils.parseEther('6000'),
@@ -114,7 +114,7 @@ const stagesData: StageData[] = [
   },
   {
     closeTimestamp: 1628352000,
-    rate: 1030927,
+    rate: 1000000,
     bonus: 3,
     cap: utils.parseEther('9000'),
     startCap: utils.parseEther('12000'),
@@ -132,7 +132,7 @@ const stagesData: StageData[] = [
   },
   {
     closeTimestamp: 1631451600,
-    rate: 666666,
+    rate: 666667,
     bonus: 0,
     cap: utils.parseEther('16500'),
     startCap: utils.parseEther('33500'),
