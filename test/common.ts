@@ -54,7 +54,6 @@ type StageData = {
   rate: BigNumberish
   bonus: BigNumberish
   cap: BigNumberish
-  startCap: BigNumberish
   minContribution: BigNumber
   maxContribution: BigNumber
   whitelists?: string[]
@@ -67,7 +66,6 @@ const stagesData: StageData[] = [
     rate: 0,
     bonus: 0,
     cap: 0,
-    startCap: 0,
     minContribution: BigNumber.from(0),
     maxContribution: BigNumber.from(0),
   },
@@ -76,7 +74,6 @@ const stagesData: StageData[] = [
     rate: 4000000,
     bonus: 30,
     cap: utils.parseEther('2500'),
-    startCap: 0,
     minContribution: utils.parseEther('0.5'),
     maxContribution: utils.parseEther('5'),
     whitelists: [GUARANTEED_SPOT_WHITELIST],
@@ -87,7 +84,6 @@ const stagesData: StageData[] = [
     rate: 4000000,
     bonus: 30,
     cap: utils.parseEther('2500'),
-    startCap: 0,
     minContribution: utils.parseEther('0.5'),
     maxContribution: utils.parseEther('5'),
     whitelists: [PRIVATE_SALE_WHITELIST, GUARANTEED_SPOT_WHITELIST],
@@ -98,7 +94,6 @@ const stagesData: StageData[] = [
     rate: 2000000,
     bonus: 10,
     cap: utils.parseEther('3500'),
-    startCap: utils.parseEther('2500'),
     minContribution: utils.parseEther('1'),
     maxContribution: utils.parseEther('10'),
     whitelists: [KYCED_WHITELIST],
@@ -109,7 +104,6 @@ const stagesData: StageData[] = [
     rate: 1333333,
     bonus: 5,
     cap: utils.parseEther('6000'),
-    startCap: utils.parseEther('6000'),
     minContribution: utils.parseEther('1'),
     maxContribution: utils.parseEther('20'),
     whitelists: [KYCED_WHITELIST],
@@ -120,7 +114,6 @@ const stagesData: StageData[] = [
     rate: 1000000,
     bonus: 3,
     cap: utils.parseEther('9000'),
-    startCap: utils.parseEther('12000'),
     minContribution: utils.parseEther('1'),
     maxContribution: utils.parseEther('30'),
     whitelists: [KYCED_WHITELIST],
@@ -131,7 +124,6 @@ const stagesData: StageData[] = [
     rate: 800000,
     bonus: 0,
     cap: utils.parseEther('12500'),
-    startCap: utils.parseEther('21000'),
     minContribution: utils.parseEther('1'),
     maxContribution: utils.parseEther('50'),
     whitelists: [KYCED_WHITELIST],
@@ -142,7 +134,6 @@ const stagesData: StageData[] = [
     rate: 666667,
     bonus: 0,
     cap: utils.parseEther('16500'),
-    startCap: utils.parseEther('33500'),
     minContribution: utils.parseEther('1'),
     maxContribution: utils.parseEther('100'),
     whitelists: [KYCED_WHITELIST],

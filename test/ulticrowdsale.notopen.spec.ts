@@ -114,10 +114,6 @@ describe('UltiCrowdsale', () => {
         expect(await this.crowdsale.connect(purchaser).cap()).to.be.equal(0)
       })
 
-      it('has not reached hardcap', async function () {
-        expect(await this.crowdsale.connect(purchaser).hardcapReached()).to.be.false
-      })
-
       it('has not ZERO tokens sold', async function () {
         expect(await this.crowdsale.connect(purchaser).tokensSold()).to.be.equal(0)
       })

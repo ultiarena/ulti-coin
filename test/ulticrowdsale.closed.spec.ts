@@ -140,10 +140,6 @@ describe('UltiCrowdsale', () => {
       expect(await this.crowdsale.tokensSold()).to.be.equal(expectedTokenAmount.mul(4))
     })
 
-    it(`should return that hardcap is not reached`, async function () {
-      expect(await this.crowdsale.hardcapReached()).to.be.false
-    })
-
     context('release', async function () {
       describe('before cliff', async function () {
         describe('releasableAmount', async function () {

@@ -89,9 +89,7 @@ describe('UltiCrowdsale time dependent', () => {
         })
 
         it(`should set stage cap`, async function () {
-          expect(await this.crowdsale.connect(purchaser).cap()).to.be.equal(
-            BigNumber.from(stageData.cap).add(stageData.startCap)
-          )
+          expect(await this.crowdsale.connect(purchaser).cap()).to.be.equal(stageData.cap)
         })
 
         context('for not whitelisted', async function () {
