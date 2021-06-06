@@ -20,11 +20,10 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         uint256 minContribution;
         uint256 maxContribution;
         uint256 weiRaised;
+        mapping(address => uint256) contributions;
     }
 
     mapping(CrowdsaleStage => CrowdsaleStageData) private _stages;
-
-    mapping(address => uint256) private _weiContributed;
 
     uint256 public constant OPENING_TIME = 1623427200; // 11-06-2021 16:00 UTC
     uint256 public constant CLOSING_TIME = 1631451600; // 12-09-2021 13:00 UTC
@@ -81,12 +80,13 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
 
     modifier onlyInContributionLimits(address beneficiary, uint256 weiAmount) {
         require(weiAmount > 0, 'UltiCrowdsale: the value sent is zero');
+        CrowdsaleStage stage_ = _currentStage();
         require(
-            _weiContributed[beneficiary] + weiAmount >= minContribution(),
+            weiContributedInStage(stage_, beneficiary) + weiAmount >= minContribution(),
             'UltiCrowdsale: the value sent is insufficient for the minimal contribution'
         );
         require(
-            _weiContributed[beneficiary] + weiAmount <= maxContribution(),
+            weiContributedInStage(stage_, beneficiary) + weiAmount <= maxContribution(),
             'UltiCrowdsale: the value sent exceeds the maximum contribution'
         );
         _;
@@ -121,7 +121,15 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
     }
 
     function weiContributed(address account) public view returns (uint256) {
-        return _weiContributed[account];
+        uint256 _weiContributed = 0;
+        for (uint256 i = uint256(CrowdsaleStage.GuaranteedSpot); i <= uint256(CrowdsaleStage.Presale5); i++) {
+            _weiContributed = _weiContributed + _stages[CrowdsaleStage(i)].contributions[account];
+        }
+        return _weiContributed;
+    }
+
+    function weiContributedInStage(CrowdsaleStage stage_, address account) public view returns (uint256) {
+        return _stages[stage_].contributions[account];
     }
 
     function weiRaisedInStage(CrowdsaleStage stage_) public view returns (uint256) {
@@ -184,8 +192,9 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
     }
 
     function _updatePurchasingState(address beneficiary, uint256 weiAmount) internal override(Crowdsale) {
-        _stages[_currentStage()].weiRaised = _stages[_currentStage()].weiRaised + weiAmount;
-        _weiContributed[beneficiary] = _weiContributed[beneficiary] + weiAmount;
+        CrowdsaleStage stage_ = _currentStage();
+        _stages[stage_].weiRaised = _stages[stage_].weiRaised + weiAmount;
+        _stages[stage_].contributions[beneficiary] = _stages[stage_].contributions[beneficiary] + weiAmount;
     }
 
     function _currentStage() private view returns (CrowdsaleStage) {
@@ -218,19 +227,16 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         uint256 rate_,
         uint256 bonus_,
         uint256 cap_,
-        uint256 startingCap_,
+        uint256 startCap_,
         uint256 minContribution_,
         uint256 maxContribution_
     ) private {
-        _stages[stage_] = CrowdsaleStageData(
-            closingTime_,
-            rate_,
-            bonus_,
-            cap_,
-            startingCap_,
-            minContribution_,
-            maxContribution_,
-            0
-        );
+        _stages[stage_].closingTime = closingTime_;
+        _stages[stage_].rate = rate_;
+        _stages[stage_].bonus = bonus_;
+        _stages[stage_].cap = cap_;
+        _stages[stage_].startCap = startCap_;
+        _stages[stage_].minContribution = minContribution_;
+        _stages[stage_].maxContribution = maxContribution_;
     }
 }
