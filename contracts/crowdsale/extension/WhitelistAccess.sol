@@ -41,12 +41,6 @@ contract WhitelistAccess is Context, AccessControl {
 
     /**
      * @dev Adds `account` to `whitelist`.
-     *
-     * If `account` had been added, emits a {WhitelistAdded} event.
-     *
-     * Requirements:
-     *
-     * - the caller must have ``role``'s admin role.
      */
     function addToWhitelist(bytes32 whitelist, address account) public onlyRole(WHITELIST_MANAGER_ROLE) {
         _addToWhitelist(whitelist, account);
@@ -54,29 +48,22 @@ contract WhitelistAccess is Context, AccessControl {
 
     /**
      * @dev Removes `account` from `whitelist`.
-     *
-     * If `account` had been removed, emits a {WhitelistRemoved} event.
-     *
-     * Requirements:
-     *
-     * - the caller must have ``role``'s admin role.
      */
     function removeFromWhitelist(bytes32 whitelist, address account) public onlyRole(WHITELIST_MANAGER_ROLE) {
         _removeFromWhitelist(whitelist, account);
     }
 
     /**
-     * @dev Adds multiple `accounts` to `whitelist`.
-     *
-     * For each of `accounts` if was added, emits a {WhitelistAdded} event.
-     *
-     * Requirements:
-     *
-     * - the caller must have ``role``'s admin role.
+     * @dev Adds multiple `accounts` to multiple `whitelists`.
      */
-    function bulkAddToWhitelist(bytes32 whitelist, address[] memory accounts) public onlyRole(WHITELIST_MANAGER_ROLE) {
-        for (uint256 i = 0; i < accounts.length; i++) {
-            _addToWhitelist(whitelist, accounts[i]);
+    function bulkAddToWhitelists(bytes32[] memory whitelists, address[] memory accounts)
+        public
+        onlyRole(WHITELIST_MANAGER_ROLE)
+    {
+        for (uint256 i = 0; i < whitelists.length; i++) {
+            for (uint256 j = 0; j < accounts.length; j++) {
+                _addToWhitelist(whitelists[i], accounts[j]);
+            }
         }
     }
 

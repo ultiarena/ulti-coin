@@ -65,10 +65,10 @@ describe('UltiCrowdsale', () => {
 
     await crowdsale
       .connect(admin)
-      .bulkAddToWhitelist(privateSaleWhitelistBytes, [investor.address, other_investor.address, purchaser.address])
-    await crowdsale
-      .connect(admin)
-      .bulkAddToWhitelist(kycedWhitelistBytes, [investor.address, other_investor.address, purchaser.address])
+      .bulkAddToWhitelists(
+        [privateSaleWhitelistBytes, kycedWhitelistBytes],
+        [investor.address, other_investor.address, purchaser.address]
+      )
     await crowdsale.connect(purchaser).buyTokens(investor.address, { value: value })
     expect(await crowdsale.tokensBought(investor.address)).to.be.equal(expectedTokenAmount)
 

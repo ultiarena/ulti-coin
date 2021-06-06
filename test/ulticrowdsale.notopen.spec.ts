@@ -150,7 +150,7 @@ describe('UltiCrowdsale', () => {
           })
         })
 
-        context('bulkAddToWhitelist', async function () {
+        context('bulkAddToWhitelists', async function () {
           let addresses: string[]
           beforeEach(async function () {
             addresses = addrs.map(function (a) {
@@ -160,16 +160,19 @@ describe('UltiCrowdsale', () => {
 
           it('reverts when not called by admin', async function () {
             await expect(
-              this.crowdsale.connect(purchaser).bulkAddToWhitelist(privateSaleWhitelistBytes, addresses)
+              this.crowdsale.connect(purchaser).bulkAddToWhitelists([privateSaleWhitelistBytes], addresses)
             ).to.be.revertedWith(
               `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.WHITELIST_MANAGER_ROLE()}`
             )
           })
 
-          it('adds addresses to whitelist', async function () {
-            await this.crowdsale.connect(admin).bulkAddToWhitelist(privateSaleWhitelistBytes, addresses)
+          it('adds addresses to whitelists', async function () {
+            await this.crowdsale
+              .connect(admin)
+              .bulkAddToWhitelists([privateSaleWhitelistBytes, kycedWhitelistBytes], addresses)
             for (let address of addresses) {
               await expect(await this.crowdsale.isWhitelisted(privateSaleWhitelistBytes, address)).to.be.true
+              await expect(await this.crowdsale.isWhitelisted(kycedWhitelistBytes, address)).to.be.true
             }
           })
         })

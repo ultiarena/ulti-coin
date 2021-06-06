@@ -129,7 +129,7 @@ describe('UltiCrowdsale time dependent', () => {
               beforeEach(async function () {
                 await this.crowdsale
                   .connect(admin)
-                  .bulkAddToWhitelist(stageWrongWhitelist, [purchaser.address, investor.address])
+                  .bulkAddToWhitelists([stageWrongWhitelist], [purchaser.address, investor.address])
 
                 await expect(
                   await this.crowdsale.connect(admin).isWhitelisted(stageWrongWhitelist, investor.address)
@@ -185,7 +185,7 @@ describe('UltiCrowdsale time dependent', () => {
               beforeEach(async function () {
                 await this.crowdsale
                   .connect(admin)
-                  .bulkAddToWhitelist(stageWhitelist, [purchaser.address, investor.address])
+                  .bulkAddToWhitelists([stageWhitelist], [purchaser.address, investor.address])
               })
 
               describe('bare payments', function () {
