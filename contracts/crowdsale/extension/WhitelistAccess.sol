@@ -6,6 +6,9 @@ import '@openzeppelin/contracts/utils/Context.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 
 contract WhitelistAccess is Context, AccessControl {
+    // Role that allows to add to and remove from whitelists
+    bytes32 public constant WHITELIST_MANAGER_ROLE = keccak256('WHITELIST_MANAGER_ROLE');
+
     /**
      * @dev Emitted when `account` is added to `whitelist`.
      */
@@ -18,6 +21,7 @@ contract WhitelistAccess is Context, AccessControl {
 
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(WHITELIST_MANAGER_ROLE, msg.sender);
     }
 
     /**
@@ -44,7 +48,7 @@ contract WhitelistAccess is Context, AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function addToWhitelist(bytes32 whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function addToWhitelist(bytes32 whitelist, address account) public onlyRole(WHITELIST_MANAGER_ROLE) {
         _addToWhitelist(whitelist, account);
     }
 
@@ -57,7 +61,7 @@ contract WhitelistAccess is Context, AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function removeFromWhitelist(bytes32 whitelist, address account) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function removeFromWhitelist(bytes32 whitelist, address account) public onlyRole(WHITELIST_MANAGER_ROLE) {
         _removeFromWhitelist(whitelist, account);
     }
 
@@ -70,7 +74,7 @@ contract WhitelistAccess is Context, AccessControl {
      *
      * - the caller must have ``role``'s admin role.
      */
-    function bulkAddToWhitelist(bytes32 whitelist, address[] memory accounts) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function bulkAddToWhitelist(bytes32 whitelist, address[] memory accounts) public onlyRole(WHITELIST_MANAGER_ROLE) {
         for (uint256 i = 0; i < accounts.length; i++) {
             _addToWhitelist(whitelist, accounts[i]);
         }

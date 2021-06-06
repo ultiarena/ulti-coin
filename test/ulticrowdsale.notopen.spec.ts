@@ -132,7 +132,7 @@ describe('UltiCrowdsale', () => {
             await expect(
               this.crowdsale.connect(purchaser).addToWhitelist(privateSaleWhitelistBytes, investor.address)
             ).to.be.revertedWith(
-              `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
+              `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.WHITELIST_MANAGER_ROLE()}`
             )
           })
 
@@ -162,7 +162,7 @@ describe('UltiCrowdsale', () => {
             await expect(
               this.crowdsale.connect(purchaser).bulkAddToWhitelist(privateSaleWhitelistBytes, addresses)
             ).to.be.revertedWith(
-              `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
+              `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.WHITELIST_MANAGER_ROLE()}`
             )
           })
 
@@ -183,7 +183,7 @@ describe('UltiCrowdsale', () => {
             await expect(
               this.crowdsale.connect(purchaser).removeFromWhitelist(privateSaleWhitelistBytes, investor.address)
             ).to.be.revertedWith(
-              `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
+              `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.WHITELIST_MANAGER_ROLE()}`
             )
           })
 
