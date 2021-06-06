@@ -72,7 +72,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
 
     modifier onlyNotExceedsStageCap(uint256 weiAmount) {
         require(
-            _stages[_currentStage()].startCap + _stages[_currentStage()].weiRaised + weiAmount <= cap(),
+            _stages[_currentStage()].weiRaised + weiAmount <= _stages[_currentStage()].cap,
             'UltiCrowdsale: value sent exceeds maximal cap of stage'
         );
         _;
