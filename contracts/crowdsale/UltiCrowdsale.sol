@@ -125,6 +125,13 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
     }
 
     function weiToStageCap() external view returns (uint256) {
+        return _weiToStageCap();
+    }
+
+    function isWhitelistedForCurrentStage(address account) external view returns (bool) {
+        return _isCorrectlyWhitelisted(account);
+    }
+
     function releaseTokens(address beneficiary) external {
         require(beneficiary != address(0), 'UltiCrowdsale: beneficiary is the zero address');
         require(_isWhitelisted(KYCED_WHITELIST, beneficiary), 'UltiCrowdsale: beneficiary is not on whitelist');
@@ -147,7 +154,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         onlyInContributionLimits(beneficiary, weiAmount)
     {
         Crowdsale._preValidatePurchase(beneficiary, weiAmount);
-        require(_isLEStageCap(weiAmount), 'UltiCrowdsale: value sent exceeds cap of stage');
+        require(weiAmount <= _weiToStageCap(), 'UltiCrowdsale: value sent exceeds cap of stage');
         require(_isCorrectlyWhitelisted(beneficiary), 'UltiCrowdsale: beneficiary is not on whitelist');
     }
 
@@ -207,14 +214,14 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         }
     }
 
-    function _isLEStageCap(uint256 weiAmount) private view returns (bool) {
+    function _weiToStageCap() private view returns (uint256) {
         CrowdsaleStage stage_ = _currentStage();
         uint256 extraAmount = 0;
         // In order to sum up raised amounts in GuaranteedSpot and PrivateSale stages
         if (stage_ == CrowdsaleStage.PrivateSale) {
             extraAmount = _stages[CrowdsaleStage.GuaranteedSpot].weiRaised;
         }
-        return extraAmount + _stages[stage_].weiRaised + weiAmount <= _stages[stage_].cap;
+        return _stages[stage_].cap - _stages[stage_].weiRaised - extraAmount;
     }
 
     function _setupStage(
