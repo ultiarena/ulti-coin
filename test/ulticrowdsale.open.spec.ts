@@ -49,7 +49,7 @@ describe('UltiCrowdsale time dependent', () => {
       await ethers.provider.send('hardhat_reset', [])
 
       this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
-      this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
+      this.crowdsale = await crowdsaleFactory.connect(admin).deploy(admin.address, wallet.address, this.token.address)
       await this.token.connect(wallet).transfer(this.crowdsale.address, CROWDSALE_SUPPLY)
 
       await ethers.provider.send('evm_setNextBlockTimestamp', [OPENING_TIME])

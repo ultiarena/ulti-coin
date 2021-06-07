@@ -19,9 +19,10 @@ contract WhitelistAccess is Context, AccessControl {
      */
     event WhitelistRemoved(bytes32 indexed whitelist, address indexed account);
 
-    constructor() {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(WHITELIST_MANAGER_ROLE, msg.sender);
+    constructor(address admin_) {
+        require(admin_ != address(0), 'WhitelistAccess: admin is the zero address');
+        _setupRole(DEFAULT_ADMIN_ROLE, admin_);
+        _setupRole(WHITELIST_MANAGER_ROLE, admin_);
     }
 
     /**

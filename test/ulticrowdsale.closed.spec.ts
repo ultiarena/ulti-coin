@@ -89,7 +89,7 @@ describe('UltiCrowdsale', () => {
     beforeEach(async function () {
       await ethers.provider.send('hardhat_reset', [])
       this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
-      this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
+      this.crowdsale = await crowdsaleFactory.connect(admin).deploy(admin.address, wallet.address, this.token.address)
       await proceedCrowdsale(this.crowdsale, this.token)
     })
 
@@ -292,7 +292,7 @@ describe('UltiCrowdsale', () => {
     before(async function () {
       await ethers.provider.send('hardhat_reset', [])
       this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
-      this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
+      this.crowdsale = await crowdsaleFactory.connect(admin).deploy(admin.address, wallet.address, this.token.address)
       await proceedCrowdsale(this.crowdsale, this.token)
     })
 

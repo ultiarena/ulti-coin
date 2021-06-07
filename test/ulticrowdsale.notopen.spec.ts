@@ -45,7 +45,7 @@ describe('UltiCrowdsale', () => {
   })
 
   it('requires a non-null token', async function () {
-    await expect(crowdsaleFactory.deploy(wallet.address, ZERO_ADDRESS)).to.be.revertedWith(
+    await expect(crowdsaleFactory.deploy(admin.address, wallet.address, ZERO_ADDRESS)).to.be.revertedWith(
       'Crowdsale: token is the zero address'
     )
   })
@@ -60,14 +60,21 @@ describe('UltiCrowdsale', () => {
       this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
       expect(await this.token.balanceOf(wallet.address)).to.equal(MAX_SUPPLY)
 
-      await expect(crowdsaleFactory.deploy(ZERO_ADDRESS, this.token.address)).to.be.revertedWith(
+      await expect(crowdsaleFactory.deploy(admin.address, ZERO_ADDRESS, this.token.address)).to.be.revertedWith(
         'Crowdsale: wallet is the zero address'
+      )
+    })
+
+    it('requires a non-null admin', async function () {
+      this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
+      await expect(crowdsaleFactory.deploy(ZERO_ADDRESS, wallet.address, this.token.address)).to.be.revertedWith(
+        'WhitelistAccess: admin is the zero address'
       )
     })
 
     context('once deployed and not yet open', async function () {
       beforeEach(async function () {
-        this.crowdsale = await crowdsaleFactory.connect(admin).deploy(wallet.address, this.token.address)
+        this.crowdsale = await crowdsaleFactory.connect(admin).deploy(admin.address, wallet.address, this.token.address)
         await this.crowdsale.connect(admin).addToWhitelist(guaranteedSpotWhitelistBytes, investor.address)
         await this.crowdsale.connect(admin).addToWhitelist(kycedWhitelistBytes, investor.address)
         await this.token.connect(wallet).transfer(this.crowdsale.address, CROWDSALE_SUPPLY)

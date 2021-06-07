@@ -36,11 +36,15 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
     uint256 public constant VESTING_DURATION = 8640000; // 100 days
     uint256 public constant VESTING_INITIAL_PERCENT = 10; // 10 %
 
-    constructor(address payable wallet_, IERC20Burnable token_)
+    constructor(
+        address admin_,
+        address payable wallet_,
+        IERC20Burnable token_
+    )
         Crowdsale(1, wallet_, token_)
         TimedCrowdsale(OPENING_TIME, CLOSING_TIME)
         PostVestingCrowdsale(VESTING_START_OFFSET, VESTING_CLIFF_DURATION, VESTING_DURATION, VESTING_INITIAL_PERCENT)
-        WhitelistAccess()
+        WhitelistAccess(admin_)
     {
         _setupStage(CrowdsaleStage.Inactive, 0, 0, 0, 0, 0, 0);
         // closing: 12-06-2021 16:00 UTC, price: 0.00000019 BNB, bonus: 30%, cap: 2500 BNB, min: 0.5 BNB, max: 5 BNB
