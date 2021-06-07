@@ -194,16 +194,16 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
     }
 
     function _isCorrectlyWhitelisted(address beneficiary) private view returns (bool) {
-        CrowdsaleStage stage_ = _currentStage();
-        if (stage_ == CrowdsaleStage.GuaranteedSpot || stage_ == CrowdsaleStage.PrivateSale) {
-            bool isGuaranteedSpotWhitelisted = _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary);
-            bool isPrivateSaleWhitelisted = _isWhitelisted(PRIVATE_SALE_WHITELIST, beneficiary);
-            if (stage_ == CrowdsaleStage.GuaranteedSpot) {
-                return isGuaranteedSpotWhitelisted;
-            }
+        bool isKycedWhitelisted = _isWhitelisted(KYCED_WHITELIST, beneficiary);
+        bool isGuaranteedSpotWhitelisted = _isWhitelisted(GUARANTEED_SPOT_WHITELIST, beneficiary);
+        bool isPrivateSaleWhitelisted = _isWhitelisted(PRIVATE_SALE_WHITELIST, beneficiary);
+        if (_currentStage() == CrowdsaleStage.GuaranteedSpot) {
+            return isGuaranteedSpotWhitelisted;
+        } else if (_currentStage() == CrowdsaleStage.PrivateSale) {
             return isGuaranteedSpotWhitelisted || isPrivateSaleWhitelisted;
+        } else {
+            return isKycedWhitelisted;
         }
-        return _isWhitelisted(KYCED_WHITELIST, beneficiary);
     }
 
     function _isLEStageCap(uint256 weiAmount) private view returns (bool) {
