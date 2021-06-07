@@ -100,15 +100,15 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         return _stages[_currentStage()].maxContribution;
     }
 
-    function cap() public view returns (uint256) {
+    function cap() external view returns (uint256) {
         return _stages[_currentStage()].cap;
     }
 
-    function stage() public view returns (CrowdsaleStage) {
+    function stage() external view returns (CrowdsaleStage) {
         return _currentStage();
     }
 
-    function weiContributed(address account) public view returns (uint256) {
+    function weiContributed(address account) external view returns (uint256) {
         uint256 _weiContributed = 0;
         for (uint256 i = uint256(CrowdsaleStage.GuaranteedSpot); i <= uint256(CrowdsaleStage.Presale5); i++) {
             _weiContributed = _weiContributed + _stages[CrowdsaleStage(i)].contributions[account];
@@ -120,17 +120,18 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         return _stages[stage_].contributions[account];
     }
 
-    function weiRaisedInStage(CrowdsaleStage stage_) public view returns (uint256) {
+    function weiRaisedInStage(CrowdsaleStage stage_) external view returns (uint256) {
         return _stages[stage_].weiRaised;
     }
 
-    function releaseTokens(address beneficiary) public {
+    function weiToStageCap() external view returns (uint256) {
+    function releaseTokens(address beneficiary) external {
         require(beneficiary != address(0), 'UltiCrowdsale: beneficiary is the zero address');
         require(_isWhitelisted(KYCED_WHITELIST, beneficiary), 'UltiCrowdsale: beneficiary is not on whitelist');
         return _releaseTokens(beneficiary);
     }
 
-    function burn(uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function burn(uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(hasClosed(), 'UltiCrowdsale: crowdsale not closed');
         uint256 crowdsaleBalance = token().balanceOf(address(this));
         uint256 tokensToBeReleased = tokensSold() - tokensReleased();
