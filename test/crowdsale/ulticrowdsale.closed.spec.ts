@@ -1,6 +1,11 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCrowdsale__factory, UltiCoinUnswappable__factory, UltiCrowdsale, UltiCoinUnswappable } from '../typechain'
+import {
+  UltiCrowdsale__factory,
+  UltiCoinUnswappable__factory,
+  UltiCrowdsale,
+  UltiCoinUnswappable,
+} from '../../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
 import {
@@ -16,7 +21,7 @@ import {
   VESTING_DURATION,
   PRIVATE_SALE_WHITELIST,
   KYCED_WHITELIST,
-} from './common'
+} from '../common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { keccak256 } from 'ethers/lib/utils'
 

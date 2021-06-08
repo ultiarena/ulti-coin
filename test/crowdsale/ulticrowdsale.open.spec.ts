@@ -1,9 +1,9 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCoinUnswappable__factory, UltiCrowdsale, UltiCrowdsale__factory } from '../typechain'
+import { UltiCoinUnswappable__factory, UltiCrowdsale, UltiCrowdsale__factory } from '../../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
-import { CROWDSALE_SUPPLY, KYCED_WHITELIST, OPENING_TIME, Stages, stagesData, ZERO_ADDRESS } from './common'
+import { CROWDSALE_SUPPLY, KYCED_WHITELIST, OPENING_TIME, Stages, stagesData, ZERO_ADDRESS } from '../common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 use(solidity)

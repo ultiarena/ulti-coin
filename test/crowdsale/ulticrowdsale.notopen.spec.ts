@@ -1,6 +1,6 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCrowdsale__factory, UltiCoinUnswappable__factory } from '../typechain'
+import { UltiCrowdsale__factory, UltiCoinUnswappable__factory } from '../../typechain'
 import { solidity } from 'ethereum-waffle'
 import { utils } from 'ethers'
 import {
@@ -11,7 +11,7 @@ import {
   MAX_SUPPLY,
   GUARANTEED_SPOT_WHITELIST,
   KYCED_WHITELIST,
-} from './common'
+} from '../common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { keccak256 } from 'ethers/lib/utils'
 
@@ -131,7 +131,7 @@ describe('UltiCrowdsale', () => {
 
       context('whitelisting', async function () {
         context('addToWhitelist', async function () {
-          it('reverts when not called by admin', async function () {
+          it('reverts when not called by whitelist manager', async function () {
             await expect(
               this.crowdsale.connect(purchaser).addToWhitelist(privateSaleWhitelistBytes, investor.address)
             ).to.be.revertedWith(
@@ -139,10 +139,22 @@ describe('UltiCrowdsale', () => {
             )
           })
 
-          it('adds address to whitelist', async function () {
+          it('adds address to whitelist when called by admin', async function () {
             await this.crowdsale.connect(admin).addToWhitelist(privateSaleWhitelistBytes, investor.address)
             await expect(
               await this.crowdsale.connect(admin).isWhitelisted(privateSaleWhitelistBytes, investor.address)
+            ).to.be.true
+          })
+
+          it('adds address to whitelist when called by whitelist manager', async function () {
+            const whitelistMangerRole = await this.crowdsale.WHITELIST_MANAGER_ROLE()
+            await this.crowdsale.connect(admin).grantRole(whitelistMangerRole, deployer.address)
+            await expect(
+              await this.crowdsale.connect(deployer).hasRole(whitelistMangerRole, deployer.address)
+            ).to.be.true
+            await this.crowdsale.connect(deployer).addToWhitelist(privateSaleWhitelistBytes, investor.address)
+            await expect(
+              await this.crowdsale.connect(deployer).isWhitelisted(privateSaleWhitelistBytes, investor.address)
             ).to.be.true
           })
 
