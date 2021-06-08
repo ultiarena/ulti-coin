@@ -207,6 +207,29 @@ describe('UltiCrowdsale', () => {
           })
         })
       })
+
+      context('changeTokenAddress', async function () {
+        beforeEach(async function () {
+          this.newToken = await tokenFactory.connect(deployer).deploy(wallet.address)
+        })
+
+        it('reverts when not called by admin', async function () {
+          await expect(this.crowdsale.connect(purchaser).changeTokenAddress(this.newToken.address)).to.be.revertedWith(
+            `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
+          )
+        })
+
+        it('reverts when token is ZERO_ADDRESS', async function () {
+          await expect(this.crowdsale.connect(admin).changeTokenAddress(ZERO_ADDRESS)).to.be.revertedWith(
+            'Crowdsale: token is the zero address'
+          )
+        })
+
+        it('changes token address', async function () {
+          await this.crowdsale.connect(admin).changeTokenAddress(this.newToken.address)
+          expect(await this.crowdsale.connect(admin).token()).to.be.equal(this.newToken.address)
+        })
+      })
     })
   })
 })

@@ -146,6 +146,21 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         token().burn(amount);
     }
 
+    /*
+        This is a super emergency mechanism. It allows changing token address before the crowdsale
+        is ended and vesting is started. The whole idea is to protect the Ulti Arena project and
+        its investors from the situation that all of us are stuck with the bugs in the token contract.
+        
+        A great feature of this crowdsale is that all transfers happen after the end date, so until
+        then if some bad scenario happens, we can fix bugs, redeploy the token contract, and swap
+        the token address to the new one. The state of this crowdsale, tokens sold and wei raised
+        counters stay intact.
+    */
+    function changeTokenAddress(IERC20Burnable token_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(!hasClosed(), 'UltiCrowdsale: crowdsale is closed');
+        return _setToken(token_);
+    }
+
     function _preValidatePurchase(address beneficiary, uint256 weiAmount)
         internal
         view

@@ -286,6 +286,24 @@ describe('UltiCrowdsale', () => {
         })
       })
     })
+
+    context('changeTokenAddress', async function () {
+      beforeEach(async function () {
+        this.newToken = await tokenFactory.connect(deployer).deploy(wallet.address)
+      })
+
+      it('reverts when not called by admin', async function () {
+        await expect(this.crowdsale.connect(purchaser).changeTokenAddress(this.newToken.address)).to.be.revertedWith(
+          `AccessControl: account ${purchaser.address.toLowerCase()} is missing role ${await this.crowdsale.DEFAULT_ADMIN_ROLE()}`
+        )
+      })
+
+      it('reverts when crowdsale is closed', async function () {
+        await expect(this.crowdsale.connect(admin).changeTokenAddress(this.newToken.address)).to.be.revertedWith(
+          'UltiCrowdsale: crowdsale is closed'
+        )
+      })
+    })
   })
 
   context('post vesting delivery', async function () {

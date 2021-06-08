@@ -197,4 +197,12 @@ contract Crowdsale is Context, ReentrancyGuard {
     function _forwardFunds() internal {
         _wallet.transfer(msg.value);
     }
+
+    /**
+     * @dev Allows to change token address.
+     */
+    function _setToken(IERC20Burnable token_) internal {
+        require(address(token_) != address(0), 'Crowdsale: token is the zero address');
+        _token = token_;
+    }
 }
