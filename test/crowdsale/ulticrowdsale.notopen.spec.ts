@@ -109,24 +109,40 @@ describe('UltiCrowdsale', () => {
         expect(await this.crowdsale.connect(purchaser).stage()).to.be.equal(Stages.Inactive.valueOf())
       })
 
-      it('has zero rate', async function () {
+      it('has ZERO rate', async function () {
         expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(0)
       })
 
-      it('has zero bonus', async function () {
+      it('has ZERO bonus', async function () {
         expect(await this.crowdsale.connect(purchaser).bonus()).to.be.equal(0)
       })
 
-      it('has zero cap', async function () {
+      it('has ZERO cap', async function () {
         expect(await this.crowdsale.connect(purchaser).cap()).to.be.equal(0)
       })
 
-      it('has not ZERO tokens sold', async function () {
+      it('has ZERO tokens sold', async function () {
         expect(await this.crowdsale.connect(purchaser).tokensSold()).to.be.equal(0)
       })
 
-      it('has not ZERO tokens released', async function () {
+      it('has ZERO tokens released', async function () {
         expect(await this.crowdsale.connect(purchaser).tokensReleased()).to.be.equal(0)
+      })
+
+      it('has ZERO min contribution', async function () {
+        expect(await this.crowdsale.connect(purchaser).minContribution()).to.be.equal(0)
+      })
+
+      it('has ZERO max contribution', async function () {
+        expect(await this.crowdsale.connect(purchaser).maxContribution()).to.be.equal(0)
+      })
+
+      it('has ZERO wei raised in stage', async function () {
+        expect(await this.crowdsale.connect(purchaser).weiRaisedInStage(Stages.Inactive.valueOf())).to.be.equal(0)
+      })
+
+      it('has ZERO left to stage cap', async function () {
+        expect(await this.crowdsale.connect(purchaser).weiToStageCap()).to.be.equal(0)
       })
 
       context('whitelisting', async function () {

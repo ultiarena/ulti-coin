@@ -88,8 +88,24 @@ describe('UltiCrowdsale time dependent', () => {
           expect(await this.crowdsale.connect(purchaser).rate()).to.be.equal(stageData.rate)
         })
 
-        it(`should set stage cap`, async function () {
+        it(`should set ${utils.formatEther(stageData.cap).toString()} stage cap`, async function () {
           expect(await this.crowdsale.connect(purchaser).cap()).to.be.equal(stageData.cap)
+        })
+
+        it(`should set ${utils.formatEther(stageData.minContribution).toString()} minContribution`, async function () {
+          expect(await this.crowdsale.connect(purchaser).minContribution()).to.be.equal(stageData.minContribution)
+        })
+
+        it(`should set ${utils.formatEther(stageData.maxContribution).toString()} maxContribution`, async function () {
+          expect(await this.crowdsale.connect(purchaser).maxContribution()).to.be.equal(stageData.maxContribution)
+        })
+
+        it(`has ${utils.formatEther(stageData.cap).toString()} left to stage cap`, async function () {
+          expect(await this.crowdsale.connect(purchaser).weiToStageCap()).to.be.equal(stageData.cap)
+        })
+
+        it('has ZERO wei raised in stage', async function () {
+          expect(await this.crowdsale.connect(purchaser).weiRaisedInStage(Stages.Inactive.valueOf())).to.be.equal(0)
         })
 
         context('for not whitelisted', async function () {
@@ -241,7 +257,7 @@ describe('UltiCrowdsale time dependent', () => {
                     const purchaseBonus = purchaseTokenAmount.mul(stageData.bonus).div(100)
                     const expectedTokenAmount = purchaseTokenAmount.add(purchaseBonus)
 
-                    it(`has  ${utils.formatEther(expectedTokenAmount).toString()} tokens sold`, async function () {
+                    it(`has ${utils.formatEther(expectedTokenAmount).toString()} tokens sold`, async function () {
                       await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
                       expect(await this.crowdsale.tokensSold()).to.be.eq(expectedTokenAmount)
                     })
@@ -251,6 +267,17 @@ describe('UltiCrowdsale time dependent', () => {
                       .toString()} tokens to beneficiary`, async function () {
                       await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
                       expect(await this.crowdsale.tokensBought(investor.address)).to.be.equal(expectedTokenAmount)
+                    })
+
+                    it(`should set wei counters`, async function () {
+                      await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
+                      expect(await this.crowdsale.weiToStageCap()).to.be.equal(
+                        BigNumber.from(stageData.cap).sub(purchaseValue)
+                      )
+                      expect(await this.crowdsale.weiRaisedInStage(stage.valueOf())).to.be.equal(purchaseValue)
+                      expect(await this.crowdsale.weiContributedInStage(stage.valueOf(), investor.address)).to.be.equal(
+                        purchaseValue
+                      )
                     })
 
                     it(`should forward ${utils
@@ -332,6 +359,17 @@ describe('UltiCrowdsale time dependent', () => {
                       .toString()} tokens to beneficiary`, async function () {
                       await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
                       expect(await this.crowdsale.tokensBought(investor.address)).to.be.equal(expectedTokenAmount)
+                    })
+
+                    it(`should set wei counters`, async function () {
+                      await this.crowdsale.connect(purchaser).buyTokens(investor.address, { value: purchaseValue })
+                      expect(await this.crowdsale.weiToStageCap()).to.be.equal(
+                        BigNumber.from(stageData.cap).sub(purchaseValue)
+                      )
+                      expect(await this.crowdsale.weiRaisedInStage(stage.valueOf())).to.be.equal(purchaseValue)
+                      expect(await this.crowdsale.weiContributedInStage(stage.valueOf(), investor.address)).to.be.equal(
+                        purchaseValue
+                      )
                     })
 
                     it(`should forward ${utils

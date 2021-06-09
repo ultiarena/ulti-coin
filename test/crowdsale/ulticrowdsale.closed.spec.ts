@@ -186,6 +186,13 @@ describe('UltiCrowdsale', () => {
             )
           })
 
+          it('reverts when transfer called by not KYCed', async function () {
+            await this.crowdsale.connect(admin).removeFromWhitelist(kycedWhitelistBytes, investor.address)
+            await expect(this.crowdsale.releaseTokens(investor.address)).to.be.revertedWith(
+              'UltiCrowdsale: beneficiary is not on whitelist'
+            )
+          })
+
           it(`should not change others balances`, async function () {
             await this.crowdsale.releaseTokens(other_investor.address)
             const otherInvestorBalance = await this.token.balanceOf(other_investor.address)
