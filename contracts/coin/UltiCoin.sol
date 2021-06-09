@@ -51,7 +51,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
     event IncludedInReward(address indexed account);
     event ExcludedFromReward(address indexed account);
 
-    constructor(address owner, address router) SwapAndLiquify(router) {
+    constructor(address owner, address router) SwapAndLiquify(router, owner) {
         // Transfer ownership to given address
         transferOwnership(owner);
         // Assign whole supply to the owner

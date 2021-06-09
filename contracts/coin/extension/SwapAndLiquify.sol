@@ -25,7 +25,7 @@ abstract contract SwapAndLiquify is Context {
         _isInSwapAndLiquify = false;
     }
 
-    constructor(address routerAddress_) {
+    constructor(address routerAddress_, address swapLeftoversReceiver_) {
         // Create a Uniswap pair for this new token
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(routerAddress_);
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(
@@ -34,8 +34,8 @@ abstract contract SwapAndLiquify is Context {
         );
         uniswapV2Router = _uniswapV2Router;
 
-        // Set owner address to be able to receive swap leftovers
-        swapLeftoversReceiver = payable(_msgSender());
+        // Set given address to be able to receive swap leftovers
+        swapLeftoversReceiver = payable(swapLeftoversReceiver_);
     }
 
     receive() external payable {}
@@ -44,7 +44,7 @@ abstract contract SwapAndLiquify is Context {
         return _isInSwapAndLiquify;
     }
 
-    function withdrawSwapLeftovers() public {
+    function withdrawSwapLeftovers() external {
         require(_msgSender() == swapLeftoversReceiver, 'Caller is not able to receive swap leftovers');
         swapLeftoversReceiver.transfer(address(this).balance);
     }
