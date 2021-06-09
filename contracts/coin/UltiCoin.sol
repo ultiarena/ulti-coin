@@ -180,7 +180,6 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
     }
 
     function excludeFromReward(address account) external onlyOwner() {
-        // require(account != 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F, 'We can not exclude Pancake router.');
         require(account != address(this), 'Cannot exclude self contract');
         if (!_excludedFromReward.contains(account)) {
             if (_rOwned[account] > 0) {
