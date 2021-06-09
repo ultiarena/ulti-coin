@@ -64,19 +64,19 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         emit ExcludedFromFee(address(this));
     }
 
-    function name() public pure returns (string memory) {
+    function name() external pure returns (string memory) {
         return _name;
     }
 
-    function symbol() public pure returns (string memory) {
+    function symbol() external pure returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public pure returns (uint8) {
+    function decimals() external pure returns (uint8) {
         return _decimals;
     }
 
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() external view override returns (uint256) {
         return _tTotal;
     }
 
@@ -129,15 +129,15 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         return _excludedFromReward.contains(account);
     }
 
-    function isExcludedFromFee(address account) public view returns (bool) {
+    function isExcludedFromFee(address account) external view returns (bool) {
         return _isExcludedFromFee[account];
     }
 
-    function totalFees() public view returns (uint256) {
+    function totalFees() external view returns (uint256) {
         return _tFeeTotal;
     }
 
-    function totalBurned() public view returns (uint256) {
+    function totalBurned() external view returns (uint256) {
         return _tBurnTotal;
     }
 
@@ -151,18 +151,18 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         _reflectFeeAndBurn(tAmount, 0, currentRate);
     }
 
-    function burn(uint256 amount) public {
+    function burn(uint256 amount) external {
         _burn(_msgSender(), amount);
     }
 
-    function burnFrom(address account, uint256 amount) public {
+    function burnFrom(address account, uint256 amount) external {
         uint256 currentAllowance = _allowances[account][_msgSender()];
         require(currentAllowance >= amount, 'ERC20: burn amount exceeds allowance');
         _approve(account, _msgSender(), currentAllowance - amount);
         _burn(account, amount);
     }
 
-    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns (uint256) {
+    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) external view returns (uint256) {
         require(tAmount <= _tTotal, 'Amount must be less than supply');
         uint256 currentRate = _getRate();
         if (!deductTransferFee) {
@@ -229,7 +229,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         emit Approval(owner, spender, amount);
     }
 
-    function _burn(address account, uint256 tAmount) internal {
+    function _burn(address account, uint256 tAmount) private {
         require(account != address(0), 'ERC20: burn from the zero address');
         require(_balanceOf(account) >= tAmount, 'ERC20: burn amount exceeds balance');
 
