@@ -257,6 +257,12 @@ describe('UltiCrowdsale', () => {
           await this.crowdsale.connect(admin).changeTokenAddress(this.newToken.address)
           expect(await this.crowdsale.connect(admin).token()).to.be.equal(this.newToken.address)
         })
+
+        it('emits TokenChanged event', async function () {
+          await expect(this.crowdsale.connect(admin).changeTokenAddress(this.newToken.address))
+            .to.emit(this.crowdsale, 'TokenChanged')
+            .withArgs(this.newToken.address)
+        })
       })
     })
   })

@@ -47,6 +47,12 @@ contract Crowdsale is Context, ReentrancyGuard {
     event TokensPurchased(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
     /**
+     * Event for token changes logging
+     * @param token new token address
+     */
+    event TokenChanged(address indexed token);
+
+    /**
      * @param rate_ Number of token units a buyer gets per wei
      * @dev The rate is the conversion between wei and the smallest and indivisible
      * token unit. So, if you are using a rate of 1 with a ERC20Detailed token
@@ -204,5 +210,6 @@ contract Crowdsale is Context, ReentrancyGuard {
     function _setToken(IERC20Burnable token_) internal {
         require(address(token_) != address(0), 'Crowdsale: token is the zero address');
         _token = token_;
+        emit TokenChanged(address(token_));
     }
 }
