@@ -3,8 +3,19 @@ import { ethers } from 'hardhat'
 import { UltiCoinUnswappable__factory, UltiCrowdsale, UltiCrowdsale__factory } from '../../typechain'
 import { solidity } from 'ethereum-waffle'
 import { BigNumber, utils } from 'ethers'
-import { CROWDSALE_SUPPLY, KYCED_WHITELIST, OPENING_TIME, Stages, stagesData, ZERO_ADDRESS } from '../common'
+import {
+  CROWDSALE_SUPPLY,
+  GUARANTEED_SPOT_WHITELIST,
+  KYCED_WHITELIST,
+  OPENING_TIME,
+  PRIVATE_SALE_WHITELIST,
+  Stages,
+  stagesData,
+  VESTING_INITIAL_PERCENT,
+  ZERO_ADDRESS,
+} from '../common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { keccak256 } from 'ethers/lib/utils'
 
 use(solidity)
 
@@ -37,6 +48,78 @@ describe('UltiCrowdsale time dependent', () => {
     utils.parseEther('51'),
     utils.parseEther('99.9'),
   ]
+
+  const privateSaleWhitelistBytes = keccak256(Buffer.from(PRIVATE_SALE_WHITELIST))
+  const guaranteedWhitelistBytes = keccak256(Buffer.from(GUARANTEED_SPOT_WHITELIST))
+  const kycedWhitelistBytes = keccak256(Buffer.from(KYCED_WHITELIST))
+
+  context(' ', async function () {
+    before(async function () {
+      ;[deployer, admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()
+      tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
+      crowdsaleFactory = (await ethers.getContractFactory('UltiCrowdsale')) as UltiCrowdsale__factory
+      await ethers.provider.send('hardhat_reset', [])
+      this.token = await tokenFactory.connect(deployer).deploy(wallet.address)
+      this.crowdsale = await crowdsaleFactory.connect(admin).deploy(admin.address, wallet.address, this.token.address)
+
+      await this.crowdsale
+        .connect(admin)
+        .bulkAddToWhitelists(
+          [privateSaleWhitelistBytes, guaranteedWhitelistBytes, kycedWhitelistBytes],
+          [investor.address, purchaser.address]
+        )
+    })
+
+    async function mineToTimestamp(newTimestamp: Number) {
+      await ethers.provider.send('evm_setNextBlockTimestamp', [newTimestamp])
+      await ethers.provider.send('evm_mine', [])
+    }
+
+    describe('sequence of actions', async function () {
+      it('transfers', async function () {
+        let stage = Stages.GuaranteedSpot
+        let stageData_ = stagesData[stage]
+        await mineToTimestamp(Number(stageData_.closeTimestamp) - 1000)
+
+        const purchaseValue = utils.parseEther('3')
+        await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
+        expect(await this.crowdsale.weiToStageCap()).to.be.equal(BigNumber.from(stageData_.cap).sub(purchaseValue))
+        expect(await this.crowdsale.weiRaisedInStage(stage.valueOf())).to.be.equal(purchaseValue)
+        expect(await this.crowdsale.weiContributedInStage(stage.valueOf(), investor.address)).to.be.equal(purchaseValue)
+
+        await expect(investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })).to.be.revertedWith(
+          'UltiCrowdsale: the value sent exceeds the maximum contribution'
+        )
+
+        stage = Stages.PrivateSale
+        stageData_ = stagesData[stage]
+        await mineToTimestamp(Number(stageData_.closeTimestamp) - 1000)
+
+        await expect(investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })).to.be.revertedWith(
+          'UltiCrowdsale: the value sent exceeds the maximum contribution'
+        )
+
+        const purchaseValue2 = utils.parseEther('2')
+        await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue2 })
+        expect(await this.crowdsale.weiToStageCap()).to.be.equal(
+          BigNumber.from(stageData_.cap).sub(purchaseValue2.add(purchaseValue))
+        )
+        expect(await this.crowdsale.weiRaisedInStage(stage.valueOf())).to.be.equal(purchaseValue2)
+        expect(await this.crowdsale.weiContributedInStage(stage.valueOf(), investor.address)).to.be.equal(
+          purchaseValue2
+        )
+
+        stage = Stages.Presale1
+        stageData_ = stagesData[stage]
+        await mineToTimestamp(Number(stageData_.closeTimestamp) - 1000)
+
+        await investor.sendTransaction({ to: this.crowdsale.address, value: purchaseValue })
+        expect(await this.crowdsale.weiToStageCap()).to.be.equal(BigNumber.from(stageData_.cap).sub(purchaseValue))
+        expect(await this.crowdsale.weiRaisedInStage(stage.valueOf())).to.be.equal(purchaseValue)
+        expect(await this.crowdsale.weiContributedInStage(stage.valueOf(), investor.address)).to.be.equal(purchaseValue)
+      })
+    })
+  })
 
   beforeEach(async () => {
     ;[deployer, admin, wallet, investor, purchaser, ...addrs] = await ethers.getSigners()

@@ -63,14 +63,6 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
         _setupStage(CrowdsaleStage.Presale5, 1631451600, 666667, 0, 16500 * 1e18, 1 * 1e18, 100 * 1e18);
     }
 
-    modifier onlyNotExceedsStageCap(uint256 weiAmount) {
-        require(
-            _stages[_currentStage()].weiRaised + weiAmount <= _stages[_currentStage()].cap,
-            'UltiCrowdsale: value sent exceeds maximal cap of stage'
-        );
-        _;
-    }
-
     modifier onlyInContributionLimits(address beneficiary, uint256 weiAmount) {
         require(weiAmount > 0, 'UltiCrowdsale: the value sent is zero');
         require(
@@ -78,7 +70,7 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
             'UltiCrowdsale: the value sent is insufficient for the minimal contribution'
         );
         require(
-            weiContributedInStage(_currentStage(), beneficiary) + weiAmount <= maxContribution(),
+            weiAmount <= _weiToContributionLimit(beneficiary),
             'UltiCrowdsale: the value sent exceeds the maximum contribution'
         );
         _;
@@ -237,6 +229,16 @@ contract UltiCrowdsale is Crowdsale, TimedCrowdsale, PostVestingCrowdsale, White
             extraAmount = _stages[CrowdsaleStage.GuaranteedSpot].weiRaised;
         }
         return _stages[stage_].cap - _stages[stage_].weiRaised - extraAmount;
+    }
+
+    function _weiToContributionLimit(address account) private view returns (uint256) {
+        CrowdsaleStage stage_ = _currentStage();
+        uint256 extraAmount = 0;
+        // In order to sum up raised amounts in GuaranteedSpot and PrivateSale stages
+        if (stage_ == CrowdsaleStage.PrivateSale) {
+            extraAmount = weiContributedInStage(CrowdsaleStage.GuaranteedSpot, account);
+        }
+        return maxContribution() - weiContributedInStage(stage_, account) - extraAmount;
     }
 
     function _setupStage(
