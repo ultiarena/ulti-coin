@@ -22,15 +22,11 @@ Compile files:
 
 Run tests:
 - `yarn test`
-- `yarn test test/crowdsale/crowdsale.spec.ts`
 
 Deploy - choose network nad put your mnemonic to `.secrets.json`:
 - `yarn coin-deploy-testnet`
 - `yarn coin-deploy-kovan`
 - `yarn coin-deploy-mainnet`
-- `yarn crowdsale-deploy-testnet`
-- `yarn crowdsale-deploy-kovan`
-- `yarn crowdsale-deploy-mainnet`
 
 Verify - choose network:
 - `yarn verify-testnet CONTRACT_ADDRESS PARAM1 PARAM2...`
@@ -39,4 +35,3 @@ Verify - choose network:
 
 Generate bytecode:
 - `yarn coin-bytecode`
-- `yarn crowdsale-bytecode`

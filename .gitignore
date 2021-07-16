@@ -12,5 +12,4 @@ artifacts/
 cache/
 crytic-export/
 typechain/
-contracts/test/UltiCrowdsaleTestnet.sol
 @openzeppelin
