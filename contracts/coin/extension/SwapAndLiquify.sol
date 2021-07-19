@@ -17,7 +17,7 @@ abstract contract SwapAndLiquify is Context {
     address payable public swapLeftoversReceiver;
 
     event SwapAndLiquifySwitched(bool enabled);
-    event SwappedAndLiquidated(uint256 tokensSwapped, uint256 ethReceived, uint256 tokensIntoLiquidity);
+    event SwappedAndLiquified(uint256 tokensSwapped, uint256 ethReceived, uint256 tokensIntoLiquidity);
 
     modifier lockTheSwap {
         _isInSwapAndLiquify = true;
@@ -63,7 +63,7 @@ abstract contract SwapAndLiquify is Context {
         uint256 newBalance = address(this).balance;
 
         _addLiquidity(otherHalf, newBalance - balance);
-        emit SwappedAndLiquidated(firstHalf, newBalance, otherHalf);
+        emit SwappedAndLiquified(firstHalf, newBalance, otherHalf);
     }
 
     function _swapTokensForETH(uint256 tokenAmount) private {
