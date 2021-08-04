@@ -274,26 +274,27 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
     ) private {
         require(sender != address(0), 'ERC20: transfer from the zero address');
         require(recipient != address(0), 'ERC20: transfer to the zero address');
-        require(amount > 0, 'Transfer amount must be greater than zero');
+        require(amount > 0, 'ERC20: transfer amount must be greater than zero');
 
         if (!isExcludedFromTransferLimit(sender) && !isExcludedFromTransferLimit(recipient)) {
-            require(amount <= _maxTransferAmount(), 'Transfer amount exceeds maximal tx amount');
+            require(amount <= _maxTransferAmount(), 'UltiCoin: Transfer amount exceeds the limit');
         }
 
+        _liquifyTokens(sender);
+
+        _tokenTransfer(sender, recipient, amount);
+    }
+
+    function _liquifyTokens(address sender) private {
         uint256 amountToLiquify = _balanceOf(address(this));
         if (
-            isLiquifyingEnabled &&
-            !_isInSwapAndLiquify() &&
-            sender != uniswapV2Pair &&
-            amountToLiquify >= minAmountToLiquify
+            isLiquifyingEnabled && !_isInSwapAndLiquify() && sender != swapPair && amountToLiquify >= minAmountToLiquify
         ) {
             amountToLiquify = Math.min(amountToLiquify, _maxTransferAmount());
             // approve router to transfer tokens to cover all possible scenarios
-            _approve(address(this), address(uniswapRouter), amountToLiquify);
+            _approve(address(this), address(swapRouter), amountToLiquify);
             _swapAndLiquify(amountToLiquify, owner());
         }
-
-        _tokenTransfer(sender, recipient, amount);
     }
 
     function _tokenTransfer(

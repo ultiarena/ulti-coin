@@ -11,8 +11,8 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 contract Liquify is Context, Ownable {
     bool private isInSwapAndLiquify = false;
 
-    IUniswapV2Router02 public uniswapRouter;
-    address public uniswapV2Pair;
+    IUniswapV2Router02 public swapRouter;
+    address public swapPair;
 
     bool public isLiquifyingEnabled = true;
 
@@ -40,7 +40,8 @@ contract Liquify is Context, Ownable {
     }
 
     function switchLiquifying() external onlyOwner() {
-        return _switchLiquifying();
+        isLiquifyingEnabled = !isLiquifyingEnabled;
+        emit LiquifyingSwitched(isLiquifyingEnabled);
     }
 
     function setMinAmountToLiquify(uint256 amount) external onlyOwner() {
@@ -62,7 +63,6 @@ contract Liquify is Context, Ownable {
     function _swapAndLiquify(uint256 tokenAmount, address lpReceiver) internal lockTheSwap {
         uint256 firstHalf = tokenAmount / 2;
         uint256 otherHalf = tokenAmount - firstHalf;
-
         uint256 ethReceived = _swapTokensForETH(firstHalf);
         _addLiquidity(otherHalf, ethReceived, lpReceiver);
     }
@@ -70,10 +70,10 @@ contract Liquify is Context, Ownable {
     function _swapTokensForETH(uint256 tokenAmount) private returns (uint256) {
         address[] memory path = new address[](2);
         path[0] = address(this);
-        path[1] = uniswapRouter.WETH();
+        path[1] = swapRouter.WETH();
 
         uint256 balance = address(this).balance;
-        uniswapRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
+        swapRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
             tokenAmount,
             0, // accept any amount of ETH
             path,
@@ -82,7 +82,6 @@ contract Liquify is Context, Ownable {
         );
         uint256 newBalance = address(this).balance;
         uint256 ethReceived = newBalance - balance;
-
         emit Swapped(tokenAmount, ethReceived);
 
         return ethReceived;
@@ -94,7 +93,7 @@ contract Liquify is Context, Ownable {
         address lpReceiver
     ) private {
         (uint256 amountToken, uint256 amountETH, uint256 liquidity) =
-            uniswapRouter.addLiquidityETH{value: ethAmount}(
+            swapRouter.addLiquidityETH{value: ethAmount}(
                 address(this),
                 tokenAmount,
                 0, // slippage is unavoidable
@@ -106,15 +105,9 @@ contract Liquify is Context, Ownable {
     }
 
     function _setRouterAddress(address routerAddress_) private {
-        IUniswapV2Router02 _uniswapRouter = IUniswapV2Router02(routerAddress_);
-        uniswapV2Pair = IUniswapV2Factory(_uniswapRouter.factory()).createPair(address(this), _uniswapRouter.WETH());
-        uniswapRouter = _uniswapRouter;
-
-        emit SwapPairCreated(uniswapV2Pair);
-    }
-
-    function _switchLiquifying() private {
-        isLiquifyingEnabled = !isLiquifyingEnabled;
-        emit LiquifyingSwitched(isLiquifyingEnabled);
+        IUniswapV2Router02 _swapRouter = IUniswapV2Router02(routerAddress_);
+        swapPair = IUniswapV2Factory(_swapRouter.factory()).createPair(address(this), _swapRouter.WETH());
+        swapRouter = _swapRouter;
+        emit SwapPairCreated(swapPair);
     }
 }
