@@ -2,8 +2,9 @@
 
 pragma solidity ^0.8.6;
 
-import './extensions/LimitTransfer.sol';
 import './extensions/Liquify.sol';
+import './extensions/SwapCooldown.sol';
+import './extensions/TransferLimit.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
@@ -22,7 +23,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Liquify {
+contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCooldown, TransferLimit {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -35,6 +36,7 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
     mapping(address => mapping(address => uint256)) private _allowances;
 
     mapping(address => bool) private _isExcludedFromFee;
+    mapping(address => bool) private _isExcludedFromTransferLimits;
     EnumerableSet.AddressSet private _excludedFromReward;
 
     uint256 private _tTotal = 250 * 1e9 * (10**uint256(_decimals));
@@ -51,6 +53,8 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
     event ExcludedFromFee(address indexed account);
     event IncludedInReward(address indexed account);
     event ExcludedFromReward(address indexed account);
+    event IncludedInTransferLimits(address indexed account);
+    event ExcludedFromTransferLimits(address indexed account);
 
     constructor(address owner, address router) Liquify(router) {
         // Transfer ownership to given address
@@ -64,14 +68,17 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
         _excludeFromFee(owner);
         _excludeFromFee(address(this));
 
-        // Exclude the owner from transfers throttling
-        _excludeFromTransferLimit(owner);
+        // Exclude the owner from transfers limits
+        _excludeFromTransferLimits(owner);
 
-        // Set initial transfer limit
-        _setMaxTransferAmount(10 * 10e6 * (10**uint256(_decimals)));
+        // Set initial single transfer limit
+        _setSingleTransferLimit(10 * 10e6 * (10**uint256(_decimals)));
 
         // Set minimal amount needed to liquify
         _setMinAmountToLiquify(5000 * (10**uint256(_decimals)));
+
+        // Set swap cooldown duration
+        _setCooldownDuration(1 minutes);
     }
 
     function name() external pure override returns (string memory) {
@@ -112,6 +119,10 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
 
     function isExcludedFromFee(address account) external view returns (bool) {
         return _isExcludedFromFee[account];
+    }
+
+    function isExcludedFromTransferLimits(address account) public view returns (bool) {
+        return _isExcludedFromTransferLimits[account];
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
@@ -199,12 +210,20 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
         _includeInFee(account);
     }
 
+    function includeInTransferLimits(address account) external onlyOwner() {
+        _includeInTransferLimits(account);
+    }
+
     function excludeFromReward(address account) external onlyOwner() {
         _excludeFromReward(account);
     }
 
     function excludeFromFee(address account) external onlyOwner() {
         _excludeFromFee(account);
+    }
+
+    function excludeFromTransferLimits(address account) external onlyOwner() {
+        _excludeFromTransferLimits(account);
     }
 
     // Private functions
@@ -221,6 +240,11 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
         emit IncludedInFee(account);
     }
 
+    function _includeInTransferLimits(address account) private {
+        _isExcludedFromTransferLimits[account] = false;
+        emit IncludedInTransferLimits(account);
+    }
+
     function _excludeFromReward(address account) private {
         require(account != address(this), 'Cannot exclude self contract');
         if (!_excludedFromReward.contains(account)) {
@@ -235,6 +259,11 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
     function _excludeFromFee(address account) private {
         _isExcludedFromFee[account] = true;
         emit ExcludedFromFee(account);
+    }
+
+    function _excludeFromTransferLimits(address account) private {
+        _isExcludedFromTransferLimits[account] = true;
+        emit ExcludedFromTransferLimits(account);
     }
 
     function _balanceOf(address account) private view returns (uint256) {
@@ -276,13 +305,35 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
         require(recipient != address(0), 'ERC20: transfer to the zero address');
         require(amount > 0, 'ERC20: transfer amount must be greater than zero');
 
-        if (!isExcludedFromTransferLimit(sender) && !isExcludedFromTransferLimit(recipient)) {
-            require(amount <= _maxTransferAmount(), 'UltiCoin: Transfer amount exceeds the limit');
-        }
+        _checkTransferLimit(sender, recipient, amount);
+
+        _checkSwapCooldown(sender, recipient);
 
         _liquifyTokens(sender);
 
         _tokenTransfer(sender, recipient, amount);
+    }
+
+    function _checkTransferLimit(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) private view {
+        if (!isExcludedFromTransferLimits(sender) && !isExcludedFromTransferLimits(recipient)) {
+            require(amount <= _singleTransferLimit(), 'UltiCoin: Transfer amount exceeds the limit');
+        }
+    }
+
+    function _checkSwapCooldown(address sender, address recipient) private {
+        if (
+            cooldownDuration > 0 &&
+            !isExcludedFromTransferLimits(recipient) &&
+            sender == swapPair &&
+            recipient != address(swapRouter)
+        ) {
+            require(_cooldown(recipient) < block.timestamp, 'UltiCoin: Swap is cooling down');
+            _setCooldown(recipient);
+        }
     }
 
     function _liquifyTokens(address sender) private {
@@ -290,7 +341,7 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Li
         if (
             isLiquifyingEnabled && !_isInSwapAndLiquify() && sender != swapPair && amountToLiquify >= minAmountToLiquify
         ) {
-            amountToLiquify = Math.min(amountToLiquify, _maxTransferAmount());
+            amountToLiquify = Math.min(amountToLiquify, _singleTransferLimit());
             // approve router to transfer tokens to cover all possible scenarios
             _approve(address(this), address(swapRouter), amountToLiquify);
             _swapAndLiquify(amountToLiquify, owner());
