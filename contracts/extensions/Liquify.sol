@@ -6,14 +6,17 @@ import '../interfaces/IUniswapV2Factory.sol';
 import '../interfaces/IUniswapV2Pair.sol';
 import '../interfaces/IUniswapV2Router02.sol';
 import '@openzeppelin/contracts/utils/Context.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
 
-contract Liquifiable is Context {
+contract Liquify is Context, Ownable {
     bool private isInSwapAndLiquify = false;
 
     IUniswapV2Router02 public uniswapRouter;
     address public uniswapV2Pair;
 
     bool public isLiquifyingEnabled = true;
+
+    uint256 public minAmountToLiquify;
 
     event SwapPairCreated(address uniswapPair);
     event LiquifyingSwitched(bool enabled);
@@ -32,21 +35,28 @@ contract Liquifiable is Context {
 
     receive() external payable {}
 
+    function withdrawFunds(uint256 amount) external onlyOwner() {
+        payable(owner()).transfer(amount);
+    }
+
+    function switchLiquifying() external onlyOwner() {
+        return _switchLiquifying();
+    }
+
+    function setMinAmountToLiquify(uint256 amount) external onlyOwner() {
+        _setMinAmountToLiquify(amount);
+    }
+
+    function setRouterAddress(address routerAddress_) external onlyOwner() {
+        _setRouterAddress(routerAddress_);
+    }
+
     function _isInSwapAndLiquify() internal view returns (bool) {
         return isInSwapAndLiquify;
     }
 
-    function _setRouterAddress(address routerAddress_) internal {
-        IUniswapV2Router02 _uniswapRouter = IUniswapV2Router02(routerAddress_);
-        uniswapV2Pair = IUniswapV2Factory(_uniswapRouter.factory()).createPair(address(this), _uniswapRouter.WETH());
-        uniswapRouter = _uniswapRouter;
-
-        emit SwapPairCreated(uniswapV2Pair);
-    }
-
-    function _switchLiquifying() internal {
-        isLiquifyingEnabled = !isLiquifyingEnabled;
-        emit LiquifyingSwitched(isLiquifyingEnabled);
+    function _setMinAmountToLiquify(uint256 amount) internal {
+        minAmountToLiquify = amount;
     }
 
     function _swapAndLiquify(uint256 tokenAmount, address lpReceiver) internal lockTheSwap {
@@ -93,5 +103,18 @@ contract Liquifiable is Context {
                 block.timestamp
             );
         emit Liquified(amountToken, amountETH, liquidity);
+    }
+
+    function _setRouterAddress(address routerAddress_) private {
+        IUniswapV2Router02 _uniswapRouter = IUniswapV2Router02(routerAddress_);
+        uniswapV2Pair = IUniswapV2Factory(_uniswapRouter.factory()).createPair(address(this), _uniswapRouter.WETH());
+        uniswapRouter = _uniswapRouter;
+
+        emit SwapPairCreated(uniswapV2Pair);
+    }
+
+    function _switchLiquifying() private {
+        isLiquifyingEnabled = !isLiquifyingEnabled;
+        emit LiquifyingSwitched(isLiquifyingEnabled);
     }
 }

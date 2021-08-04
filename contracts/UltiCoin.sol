@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.6;
 
-import './extensions/Liquifiable.sol';
-import './extensions/TransferLimit.sol';
+import './extensions/LimitTransfer.sol';
+import './extensions/Liquify.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
@@ -22,7 +22,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquifiable, TransferLimit {
+contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, LimitTransfer, Liquify {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -47,14 +47,12 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquifiable, Tran
     uint256 private constant _tBurnPercent = 2;
     uint256 private constant _tLiquidityPercent = 2;
 
-    uint256 public minAmountToLiquify = 5000 * (10**uint256(_decimals));
-
     event IncludedInFee(address indexed account);
     event ExcludedFromFee(address indexed account);
     event IncludedInReward(address indexed account);
     event ExcludedFromReward(address indexed account);
 
-    constructor(address owner, address router) Liquifiable(router) {
+    constructor(address owner, address router) Liquify(router) {
         // Transfer ownership to given address
         transferOwnership(owner);
 
@@ -71,6 +69,9 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquifiable, Tran
 
         // Set initial transfer limit
         _setMaxTransferAmount(10 * 10e6 * (10**uint256(_decimals)));
+
+        // Set minimal amount needed to liquify
+        _setMinAmountToLiquify(5000 * (10**uint256(_decimals)));
     }
 
     function name() external pure override returns (string memory) {
@@ -204,22 +205,6 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquifiable, Tran
 
     function excludeFromFee(address account) external onlyOwner() {
         _excludeFromFee(account);
-    }
-
-    function withdrawFunds(uint256 amount) external onlyOwner() {
-        payable(owner()).transfer(amount);
-    }
-
-    function switchLiquifying() external onlyOwner() {
-        return _switchLiquifying();
-    }
-
-    function setMinAmountToLiquify(uint256 minAmountToLiquify_) external onlyOwner() {
-        minAmountToLiquify = minAmountToLiquify_;
-    }
-
-    function setRouterAddress(address routerAddress_) external onlyOwner() {
-        _setRouterAddress(routerAddress_);
     }
 
     // Private functions
