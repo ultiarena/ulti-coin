@@ -1,6 +1,8 @@
-pragma solidity 0.8.0;
+// SPDX-License-Identifier: MIT
 
-import '../coin/extension/IUniswapV2Router02.sol';
+pragma solidity ^0.8.6;
+
+import '../coin/interfaces/IUniswapV2Router02.sol';
 
 contract UniswapV2Router02 is IUniswapV2Router02 {
     constructor() {}

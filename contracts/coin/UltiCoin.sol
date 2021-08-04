@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
 
+pragma solidity ^0.8.6;
+
+import './extension/Liquifiable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-import './extension/Liquifiable.sol';
 
 /*
  *    |  \  |  \|  \      |        \|      \       /      \           |  \
@@ -222,7 +223,7 @@ contract UltiCoin is Context, IERC20, Ownable, Liquifiable {
     }
 
     function withdrawFunds(uint256 amount) external onlyOwner() {
-        owner.transfer(amount);
+        payable(owner()).transfer(amount);
     }
 
     function switchLiquifying() external onlyOwner() {
@@ -293,7 +294,7 @@ contract UltiCoin is Context, IERC20, Ownable, Liquifiable {
                 amountToLiquify = _maxTxAmount;
             }
             // approve router to transfer tokens to cover all possible scenarios
-            _approve(address(this), address(uniswapV2Router), amountToLiquify);
+            _approve(address(this), address(uniswapRouter), amountToLiquify);
             _swapAndLiquify(amountToLiquify, owner());
         }
 

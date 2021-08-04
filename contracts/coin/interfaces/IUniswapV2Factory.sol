@@ -3,7 +3,7 @@
 // Source:
 // https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/interfaces/IUniswapV2Factory.sol
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.6;
 
 interface IUniswapV2Factory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint256);

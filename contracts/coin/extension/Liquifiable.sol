@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.6;
 
+import '../interfaces/IUniswapV2Factory.sol';
+import '../interfaces/IUniswapV2Pair.sol';
+import '../interfaces/IUniswapV2Router02.sol';
 import '@openzeppelin/contracts/utils/Context.sol';
-import './IUniswapV2Factory.sol';
-import './IUniswapV2Pair.sol';
-import './IUniswapV2Router02.sol';
 
-abstract contract Liquifiable is Context {
+contract Liquifiable is Context {
     bool private isInSwapAndLiquify = false;
 
     IUniswapV2Router02 public uniswapRouter;

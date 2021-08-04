@@ -3,7 +3,7 @@
 // Source:
 // https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/interfaces/IUniswapV2Pair.sol
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.6;
 
 interface IUniswapV2Pair {
     event Approval(address indexed owner, address indexed spender, uint256 value);
