@@ -5,7 +5,7 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-import './extension/SwapAndLiquify.sol';
+import './extension/Liquifiable.sol';
 
 /*
  *    |  \  |  \|  \      |        \|      \       /      \           |  \
@@ -18,7 +18,7 @@ import './extension/SwapAndLiquify.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
+contract UltiCoin is Context, IERC20, Ownable, Liquifiable {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -43,7 +43,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
     uint256 private constant _tBurnPercent = 2;
     uint256 private constant _tLiquidityPercent = 2;
 
-    uint256 private _minAmountToSwapAndLiquify = 5 * 10e5 * (10**uint256(_decimals));
+    uint256 private _minAmountToLiquify = 5000 * (10**uint256(_decimals));
     uint256 private _maxTxAmount = 10 * 10e6 * (10**uint256(_decimals));
 
     event IncludedInFee(address indexed account);
@@ -51,7 +51,7 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
     event IncludedInReward(address indexed account);
     event ExcludedFromReward(address indexed account);
 
-    constructor(address owner, address router) SwapAndLiquify(router, owner) {
+    constructor(address owner, address router) Liquifiable(router) {
         // Transfer ownership to given address
         transferOwnership(owner);
         // Assign whole supply to the owner
@@ -76,20 +76,16 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         return _decimals;
     }
 
-    function maxTxAmount() external view returns (uint256) {
-        return _maxTxAmount;
+    function allowance(address owner, address spender) external view override returns (uint256) {
+        return _allowances[owner][spender];
     }
 
-    function minAmountToSwapAndLiquify() external view returns (uint256) {
-        return _minAmountToSwapAndLiquify;
+    function balanceOf(address account) external view override returns (uint256) {
+        return _balanceOf(account);
     }
 
-    function isExcludedFromReward(address account) public view returns (bool) {
-        return _excludedFromReward.contains(account);
-    }
-
-    function isExcludedFromFee(address account) external view returns (bool) {
-        return _isExcludedFromFee[account];
+    function totalSupply() external view override returns (uint256) {
+        return _tTotal;
     }
 
     function totalFees() external view returns (uint256) {
@@ -100,16 +96,20 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         return _tBurnTotal;
     }
 
-    function totalSupply() external view override returns (uint256) {
-        return _tTotal;
+    function maxTxAmount() external view returns (uint256) {
+        return _maxTxAmount;
     }
 
-    function balanceOf(address account) external view override returns (uint256) {
-        return _balanceOf(account);
+    function isExcludedFromReward(address account) public view returns (bool) {
+        return _excludedFromReward.contains(account);
     }
 
-    function allowance(address owner, address spender) external view override returns (uint256) {
-        return _allowances[owner][spender];
+    function isExcludedFromFee(address account) external view returns (bool) {
+        return _isExcludedFromFee[account];
+    }
+
+    function minAmountToSwapAndLiquify() external view returns (uint256) {
+        return _minAmountToLiquify;
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
@@ -187,6 +187,20 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         return rAmount / currentRate;
     }
 
+    // Owner functions
+
+    function includeInReward(address account) external onlyOwner() {
+        if (_excludedFromReward.remove(account)) {
+            _tOwned[account] = 0;
+            emit IncludedInReward(account);
+        }
+    }
+
+    function includeInFee(address account) external onlyOwner() {
+        _isExcludedFromFee[account] = false;
+        emit IncludedInFee(account);
+    }
+
     function excludeFromReward(address account) external onlyOwner() {
         require(account != address(this), 'Cannot exclude self contract');
         if (!_excludedFromReward.contains(account)) {
@@ -198,34 +212,32 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         }
     }
 
-    function includeInReward(address account) external onlyOwner() {
-        if (_excludedFromReward.remove(account)) {
-            _tOwned[account] = 0;
-            emit IncludedInReward(account);
-        }
-    }
-
     function excludeFromFee(address account) external onlyOwner() {
         _isExcludedFromFee[account] = true;
         emit ExcludedFromFee(account);
-    }
-
-    function includeInFee(address account) external onlyOwner() {
-        _isExcludedFromFee[account] = false;
-        emit IncludedInFee(account);
-    }
-
-    function switchSwapAndLiquify() external onlyOwner() {
-        return _switchSwapAndLiquify();
     }
 
     function setMaxTxAmount(uint256 maxTxAmount_) external onlyOwner() {
         _maxTxAmount = maxTxAmount_;
     }
 
-    function setMinAmountToSwapAndLiquify(uint256 minAmountToSwapAndLiquify_) external onlyOwner() {
-        _minAmountToSwapAndLiquify = minAmountToSwapAndLiquify_;
+    function withdrawFunds(uint256 amount) external onlyOwner() {
+        owner.transfer(amount);
     }
+
+    function switchLiquifying() external onlyOwner() {
+        return _switchLiquifying();
+    }
+
+    function setMinAmountToLiquify(uint256 minAmountToLiquify_) external onlyOwner() {
+        _minAmountToLiquify = minAmountToLiquify_;
+    }
+
+    function setRouterAddress(address routerAddress_) external onlyOwner() {
+        _setRouterAddress(routerAddress_);
+    }
+
+    // Private functions
 
     function _balanceOf(address account) private view returns (uint256) {
         if (isExcludedFromReward(account)) return _tOwned[account];
@@ -266,23 +278,23 @@ contract UltiCoin is Context, IERC20, Ownable, SwapAndLiquify {
         require(recipient != address(0), 'ERC20: transfer to the zero address');
         require(amount > 0, 'Transfer amount must be greater than zero');
 
-        if(sender != owner() && recipient != owner()) {
+        if (sender != owner() && recipient != owner()) {
             require(amount <= _maxTxAmount, 'Transfer amount exceeds maximal tx amount');
         }
-        
-        uint256 amountToSwapAndLiquify = _balanceOf(address(this));
+
+        uint256 amountToLiquify = _balanceOf(address(this));
         if (
-            isSwapAndLiquifyEnabled &&
-            !isInSwapAndLiquify() &&
+            isLiquifyingEnabled &&
+            !_isInSwapAndLiquify() &&
             sender != uniswapV2Pair &&
-            amountToSwapAndLiquify >= _minAmountToSwapAndLiquify
+            amountToLiquify >= _minAmountToLiquify
         ) {
-            if (amountToSwapAndLiquify > _maxTxAmount) {
-                amountToSwapAndLiquify = _maxTxAmount;
+            if (amountToLiquify > _maxTxAmount) {
+                amountToLiquify = _maxTxAmount;
             }
             // approve router to transfer tokens to cover all possible scenarios
-            _approve(address(this), address(uniswapV2Router), amountToSwapAndLiquify);
-            _swapAndLiquify(amountToSwapAndLiquify);
+            _approve(address(this), address(uniswapV2Router), amountToLiquify);
+            _swapAndLiquify(amountToLiquify, owner());
         }
 
         _tokenTransfer(sender, recipient, amount);
