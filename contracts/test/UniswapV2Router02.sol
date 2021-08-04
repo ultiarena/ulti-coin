@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.6;
 
-import '../coin/interfaces/IUniswapV2Router02.sol';
+import '../interfaces/IUniswapV2Router02.sol';
 
 contract UniswapV2Router02 is IUniswapV2Router02 {
     constructor() {}
