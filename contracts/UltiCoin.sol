@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.6;
 
+import './extensions/AccountLimit.sol';
 import './extensions/Liquify.sol';
 import './extensions/SwapCooldown.sol';
 import './extensions/TransferLimit.sol';
@@ -23,7 +24,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCooldown, TransferLimit {
+contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCooldown, TransferLimit, AccountLimit {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -68,14 +69,15 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         // Exclude the owner from transfer restrictions
         _setTransferLimitExclusion(owner, true);
         _setSwapCooldownExclusion(owner, true);
+        _setAccountLimitExclusion(owner, true);
 
-        // Set initial single transfer limit
+        // Exclude swap pair and swap router from account limit
+        _setAccountLimitExclusion(swapPair, true);
+        _setAccountLimitExclusion(address(swapRouter), true);
+
         _setSingleTransferLimit(10 * 10e6 * (10**uint256(_decimals)));
-
-        // Set minimal amount needed to liquify
+        _setAccountLimit(1 * 10e9 * (10**uint256(_decimals)));
         _setMinAmountToLiquify(5000 * (10**uint256(_decimals)));
-
-        // Set swap cooldown duration
         _setSwapCooldownDuration(1 minutes);
     }
 
@@ -283,33 +285,13 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
 
         _checkTransferLimit(sender, recipient, amount);
 
-        _checkSwapCooldown(sender, recipient);
+        _checkAccountLimit(recipient, amount, _balanceOf(recipient));
+
+        _checkSwapCooldown(sender, recipient, swapPair, address(swapRouter));
 
         _liquifyTokens(sender);
 
         _tokenTransfer(sender, recipient, amount);
-    }
-
-    function _checkTransferLimit(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) private view {
-        if (!isExcludedFromTransferLimit(sender) && !isExcludedFromTransferLimit(recipient)) {
-            require(amount <= singleTransferLimit, 'UltiCoin: Transfer amount exceeds the limit');
-        }
-    }
-
-    function _checkSwapCooldown(address sender, address recipient) private {
-        if (
-            swapCooldownDuration > 0 &&
-            !isExcludedFromSwapCooldown(recipient) &&
-            sender == swapPair &&
-            recipient != address(swapRouter)
-        ) {
-            require(_swapCooldown(recipient) < block.timestamp, 'UltiCoin: Swap is cooling down');
-            _setSwapCooldown(recipient);
-        }
     }
 
     function _liquifyTokens(address sender) private {
