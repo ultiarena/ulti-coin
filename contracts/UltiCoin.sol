@@ -9,9 +9,7 @@ import './extensions/SwapCooldown.sol';
 import './extensions/TransferLimit.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
-import '@openzeppelin/contracts/utils/math/Math.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 /*
@@ -25,17 +23,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is
-    IERC20,
-    IERC20Metadata,
-    Context,
-    Ownable,
-    AccountLimit,
-    TransferLimit,
-    Liquify,
-    SwapCooldown,
-    BotBlacklist
-{
+contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Liquify, SwapCooldown, BotBlacklist {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -87,20 +75,20 @@ contract UltiCoin is
         _setMinAmountToLiquify(5000 * (10**uint256(_decimals)));
         _setSwapCooldownDuration(1 minutes);
 
-        // Assign whole supply to the owner
+        // Assign initial supply to the owner
         _rOwned[owner] = _rTotal;
         emit Transfer(address(0), owner, _tTotal);
     }
 
-    function name() external pure override returns (string memory) {
+    function name() external pure returns (string memory) {
         return _name;
     }
 
-    function symbol() external pure override returns (string memory) {
+    function symbol() external pure returns (string memory) {
         return _symbol;
     }
 
-    function decimals() external pure override returns (uint8) {
+    function decimals() external pure returns (uint8) {
         return _decimals;
     }
 
@@ -312,7 +300,9 @@ contract UltiCoin is
         if (
             isLiquifyingEnabled && !_isInSwapAndLiquify() && sender != swapPair && amountToLiquify >= minAmountToLiquify
         ) {
-            amountToLiquify = Math.min(amountToLiquify, singleTransferLimit);
+            if (amountToLiquify > singleTransferLimit) {
+                amountToLiquify = singleTransferLimit;
+            }
             // approve router to transfer tokens to cover all possible scenarios
             _approve(address(this), address(swapRouter), amountToLiquify);
             _swapAndLiquify(amountToLiquify, owner());
