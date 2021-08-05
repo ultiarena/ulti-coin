@@ -31,4 +31,14 @@ contract TransferLimit is Ownable {
         _isExcludedFromTransferLimit[account] = isExcluded;
         emit TransferLimitExclusion(account, isExcluded);
     }
+
+    function _checkTransferLimit(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal view {
+        if (!isExcludedFromTransferLimit(sender) && !isExcludedFromTransferLimit(recipient)) {
+            require(amount <= singleTransferLimit, 'TransferLimit: Transfer amount exceeds the limit');
+        }
+    }
 }

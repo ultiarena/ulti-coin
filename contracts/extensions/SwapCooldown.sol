@@ -37,4 +37,21 @@ contract SwapCooldown is Ownable {
         _isExcludedFromSwapCooldown[account] = isExcluded;
         emit SwapCooldownExclusion(account, isExcluded);
     }
+
+    function _checkSwapCooldown(
+        address sender,
+        address recipient,
+        address swapPair,
+        address swapRouter
+    ) internal {
+        if (
+            swapCooldownDuration > 0 &&
+            !isExcludedFromSwapCooldown(recipient) &&
+            sender == swapPair &&
+            recipient != swapRouter
+        ) {
+            require(_swapCooldown(recipient) < block.timestamp, 'SwapCooldown: Swap is cooling down');
+            _setSwapCooldown(recipient);
+        }
+    }
 }
