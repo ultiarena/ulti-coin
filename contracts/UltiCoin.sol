@@ -36,7 +36,6 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
     mapping(address => mapping(address => uint256)) private _allowances;
 
     mapping(address => bool) private _isExcludedFromFee;
-    mapping(address => bool) private _isExcludedFromTransferLimits;
     EnumerableSet.AddressSet private _excludedFromReward;
 
     uint256 private _tTotal = 250 * 1e9 * (10**uint256(_decimals));
@@ -53,8 +52,6 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
     event ExcludedFromFee(address indexed account);
     event IncludedInReward(address indexed account);
     event ExcludedFromReward(address indexed account);
-    event IncludedInTransferLimits(address indexed account);
-    event ExcludedFromTransferLimits(address indexed account);
 
     constructor(address owner, address router) Liquify(router) {
         // Transfer ownership to given address
@@ -68,8 +65,9 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         _excludeFromFee(owner);
         _excludeFromFee(address(this));
 
-        // Exclude the owner from transfers limits
-        _excludeFromTransferLimits(owner);
+        // Exclude the owner from transfer restrictions
+        _setTransferLimitExclusion(owner, true);
+        _setSwapCooldownExclusion(owner, true);
 
         // Set initial single transfer limit
         _setSingleTransferLimit(10 * 10e6 * (10**uint256(_decimals)));
@@ -78,7 +76,7 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         _setMinAmountToLiquify(5000 * (10**uint256(_decimals)));
 
         // Set swap cooldown duration
-        _setCooldownDuration(1 minutes);
+        _setSwapCooldownDuration(1 minutes);
     }
 
     function name() external pure override returns (string memory) {
@@ -119,10 +117,6 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
 
     function isExcludedFromFee(address account) external view returns (bool) {
         return _isExcludedFromFee[account];
-    }
-
-    function isExcludedFromTransferLimits(address account) public view returns (bool) {
-        return _isExcludedFromTransferLimits[account];
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
@@ -210,20 +204,12 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         _includeInFee(account);
     }
 
-    function includeInTransferLimits(address account) external onlyOwner() {
-        _includeInTransferLimits(account);
-    }
-
     function excludeFromReward(address account) external onlyOwner() {
         _excludeFromReward(account);
     }
 
     function excludeFromFee(address account) external onlyOwner() {
         _excludeFromFee(account);
-    }
-
-    function excludeFromTransferLimits(address account) external onlyOwner() {
-        _excludeFromTransferLimits(account);
     }
 
     // Private functions
@@ -240,11 +226,6 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         emit IncludedInFee(account);
     }
 
-    function _includeInTransferLimits(address account) private {
-        _isExcludedFromTransferLimits[account] = false;
-        emit IncludedInTransferLimits(account);
-    }
-
     function _excludeFromReward(address account) private {
         require(account != address(this), 'Cannot exclude self contract');
         if (!_excludedFromReward.contains(account)) {
@@ -259,11 +240,6 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
     function _excludeFromFee(address account) private {
         _isExcludedFromFee[account] = true;
         emit ExcludedFromFee(account);
-    }
-
-    function _excludeFromTransferLimits(address account) private {
-        _isExcludedFromTransferLimits[account] = true;
-        emit ExcludedFromTransferLimits(account);
     }
 
     function _balanceOf(address account) private view returns (uint256) {
@@ -319,20 +295,20 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         address recipient,
         uint256 amount
     ) private view {
-        if (!isExcludedFromTransferLimits(sender) && !isExcludedFromTransferLimits(recipient)) {
-            require(amount <= _singleTransferLimit(), 'UltiCoin: Transfer amount exceeds the limit');
+        if (!isExcludedFromTransferLimit(sender) && !isExcludedFromTransferLimit(recipient)) {
+            require(amount <= singleTransferLimit, 'UltiCoin: Transfer amount exceeds the limit');
         }
     }
 
     function _checkSwapCooldown(address sender, address recipient) private {
         if (
-            cooldownDuration > 0 &&
-            !isExcludedFromTransferLimits(recipient) &&
+            swapCooldownDuration > 0 &&
+            !isExcludedFromSwapCooldown(recipient) &&
             sender == swapPair &&
             recipient != address(swapRouter)
         ) {
-            require(_cooldown(recipient) < block.timestamp, 'UltiCoin: Swap is cooling down');
-            _setCooldown(recipient);
+            require(_swapCooldown(recipient) < block.timestamp, 'UltiCoin: Swap is cooling down');
+            _setSwapCooldown(recipient);
         }
     }
 
@@ -341,7 +317,7 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         if (
             isLiquifyingEnabled && !_isInSwapAndLiquify() && sender != swapPair && amountToLiquify >= minAmountToLiquify
         ) {
-            amountToLiquify = Math.min(amountToLiquify, _singleTransferLimit());
+            amountToLiquify = Math.min(amountToLiquify, singleTransferLimit);
             // approve router to transfer tokens to cover all possible scenarios
             _approve(address(this), address(swapRouter), amountToLiquify);
             _swapAndLiquify(amountToLiquify, owner());
