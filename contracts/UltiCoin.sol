@@ -3,6 +3,7 @@
 pragma solidity ^0.8.6;
 
 import './extensions/AccountLimit.sol';
+import './extensions/BotBlacklist.sol';
 import './extensions/Liquify.sol';
 import './extensions/SwapCooldown.sol';
 import './extensions/TransferLimit.sol';
@@ -24,7 +25,17 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCooldown, TransferLimit, AccountLimit {
+contract UltiCoin is
+    IERC20,
+    IERC20Metadata,
+    Context,
+    Ownable,
+    AccountLimit,
+    TransferLimit,
+    Liquify,
+    SwapCooldown,
+    BotBlacklist
+{
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -58,10 +69,6 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         // Transfer ownership to given address
         transferOwnership(owner);
 
-        // Assign whole supply to the owner
-        _rOwned[owner] = _rTotal;
-        emit Transfer(address(0), owner, _tTotal);
-
         // Exclude the owner and this contract from the fee
         _excludeFromFee(owner);
         _excludeFromFee(address(this));
@@ -79,6 +86,10 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         _setAccountLimit(1 * 10e9 * (10**uint256(_decimals)));
         _setMinAmountToLiquify(5000 * (10**uint256(_decimals)));
         _setSwapCooldownDuration(1 minutes);
+
+        // Assign whole supply to the owner
+        _rOwned[owner] = _rTotal;
+        emit Transfer(address(0), owner, _tTotal);
     }
 
     function name() external pure override returns (string memory) {
@@ -282,6 +293,8 @@ contract UltiCoin is IERC20, IERC20Metadata, Context, Ownable, Liquify, SwapCool
         require(sender != address(0), 'ERC20: transfer from the zero address');
         require(recipient != address(0), 'ERC20: transfer to the zero address');
         require(amount > 0, 'ERC20: transfer amount must be greater than zero');
+
+        _checkBotBlacklisting(sender, recipient);
 
         _checkTransferLimit(sender, recipient, amount);
 
