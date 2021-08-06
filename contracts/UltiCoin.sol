@@ -144,14 +144,8 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Liqu
         return true;
     }
 
-    function reflect(uint256 tAmount) external {
-        address sender = _msgSender();
-        require(!isExcludedFromReward(sender), 'Excluded addresses cannot call this function');
-        require(_balanceOf(sender) >= tAmount, 'Reflect amount exceeds sender balance');
-
-        uint256 currentRate = _getRate();
-        _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
-        _reflectFeeAndBurn(tAmount, 0, currentRate);
+    function reflect(uint256 amount) external {
+        _reflect(_msgSender(), amount);
     }
 
     function burn(uint256 amount) external {
@@ -258,6 +252,15 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Liqu
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
+    }
+
+    function _reflect(address account, uint256 tAmount) private {
+        require(!isExcludedFromReward(account), 'UltiCoin: reflect from excluded address');
+        require(_balanceOf(account) >= tAmount, 'UltiCoin: reflect amount exceeds sender balance');
+
+        uint256 currentRate = _getRate();
+        _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
+        _reflectFeeAndBurn(tAmount, 0, currentRate);
     }
 
     function _burn(address account, uint256 tAmount) private {
