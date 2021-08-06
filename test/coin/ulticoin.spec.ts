@@ -1,6 +1,6 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCoin__factory, UltiCoin, UniswapV2Router02__factory } from '../../typechain'
+import { UltiCoinUnswappable__factory, UltiCoinUnswappable } from '../../typechain'
 import { solidity } from 'ethereum-waffle'
 import { DECIMALS, MAX_SUPPLY, NAME, SYMBOL } from '../common'
 import { BigNumber, utils } from 'ethers'
@@ -20,10 +20,8 @@ describe('UltiCoin', () => {
   context('once deployed', async function () {
     beforeEach(async function () {
       ;[deployer, owner, wallet, recipient, purchaser, ...addrs] = await ethers.getSigners()
-      const routerFactory = (await ethers.getContractFactory('UniswapV2Router02')) as UniswapV2Router02__factory
-      const router = await routerFactory.connect(deployer).deploy()
-      const tokenFactory = (await ethers.getContractFactory('UltiCoin')) as UltiCoin__factory
-      this.token = await tokenFactory.connect(deployer).deploy(owner.address, router.address)
+      const tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
+      this.token = await tokenFactory.connect(deployer).deploy(owner.address)
     })
 
     it(`has set name to ${NAME}`, async function () {
