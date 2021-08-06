@@ -9,25 +9,19 @@ import '@openzeppelin/contracts/utils/Context.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 contract TokensLiquify is Context, Ownable {
-    bool private isInSwapAndLiquify = false;
+    bool private isInSwapAndLiquify;
+
+    bool public isLiquifyingEnabled = true;
 
     IUniswapV2Router02 public swapRouter;
     address public swapPair;
-
-    bool public isLiquifyingEnabled = true;
 
     uint256 public minAmountToLiquify;
 
     event SwapPairCreated(address uniswapPair);
     event LiquifyingSwitched(bool enabled);
-    event Swapped(uint256 tokensSwapped, uint256 ethReceived);
-    event Liquified(uint256 tokensLiquified, uint256 ethLiquified, uint256 lpMinted);
-
-    modifier lockTheSwap {
-        isInSwapAndLiquify = true;
-        _;
-        isInSwapAndLiquify = false;
-    }
+    event TokensSwapped(uint256 tokensSwapped, uint256 ethReceived);
+    event TokensLiquified(uint256 tokensLiquified, uint256 ethLiquified, uint256 lpMinted);
 
     constructor(address routerAddress_) {
         _setRouterAddress(routerAddress_);
@@ -35,20 +29,20 @@ contract TokensLiquify is Context, Ownable {
 
     receive() external payable {}
 
-    function withdrawFunds(uint256 amount) external onlyOwner() {
+    function withdrawFunds(uint256 amount) external onlyOwner {
         payable(owner()).transfer(amount);
     }
 
-    function switchLiquifying() external onlyOwner() {
+    function switchLiquifying() external onlyOwner {
         isLiquifyingEnabled = !isLiquifyingEnabled;
         emit LiquifyingSwitched(isLiquifyingEnabled);
     }
 
-    function setMinAmountToLiquify(uint256 amount) external onlyOwner() {
-        _setMinAmountToLiquify(amount);
+    function setMinAmountToLiquify(uint256 amount) external onlyOwner {
+        minAmountToLiquify = amount;
     }
 
-    function setRouterAddress(address routerAddress_) external onlyOwner() {
+    function setRouterAddress(address routerAddress_) external onlyOwner {
         _setRouterAddress(routerAddress_);
     }
 
@@ -56,15 +50,13 @@ contract TokensLiquify is Context, Ownable {
         return isInSwapAndLiquify;
     }
 
-    function _setMinAmountToLiquify(uint256 amount) internal {
-        minAmountToLiquify = amount;
-    }
-
-    function _swapAndLiquify(uint256 tokenAmount, address lpReceiver) internal lockTheSwap {
+    function _swapAndLiquify(uint256 tokenAmount, address lpReceiver) internal {
+        isInSwapAndLiquify = true;
         uint256 firstHalf = tokenAmount / 2;
         uint256 otherHalf = tokenAmount - firstHalf;
         uint256 ethReceived = _swapTokensForETH(firstHalf);
         _addLiquidity(otherHalf, ethReceived, lpReceiver);
+        isInSwapAndLiquify = false;
     }
 
     function _swapTokensForETH(uint256 tokenAmount) private returns (uint256) {
@@ -82,7 +74,7 @@ contract TokensLiquify is Context, Ownable {
         );
         uint256 newBalance = address(this).balance;
         uint256 ethReceived = newBalance - balance;
-        emit Swapped(tokenAmount, ethReceived);
+        emit TokensSwapped(tokenAmount, ethReceived);
 
         return ethReceived;
     }
@@ -101,7 +93,7 @@ contract TokensLiquify is Context, Ownable {
                 lpReceiver,
                 block.timestamp
             );
-        emit Liquified(amountToken, amountETH, liquidity);
+        emit TokensLiquified(amountToken, amountETH, liquidity);
     }
 
     function _setRouterAddress(address routerAddress_) private {

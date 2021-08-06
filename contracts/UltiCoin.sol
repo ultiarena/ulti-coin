@@ -2,14 +2,9 @@
 
 pragma solidity ^0.8.6;
 
-import './extensions/AccountLimit.sol';
-import './extensions/BotBlacklist.sol';
-import './extensions/SwapCooldown.sol';
 import './extensions/TokensLiquify.sol';
-import './extensions/TransferLimit.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/utils/Address.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 /*
@@ -23,22 +18,25 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, TokensLiquify, SwapCooldown, BotBlacklist {
-    using Address for address;
+contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    string private constant _name = 'ULTI Coin';
-    string private constant _symbol = 'ULTI';
-    uint8 private constant _decimals = 18;
+    struct AccountStatus {
+        bool feeExcluded;
+        bool accountLimitExcluded;
+        bool transferLimitExcluded;
+        bool blacklistedBot;
+        uint256 swapCooldown;
+    }
 
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    mapping(address => bool) private _isExcludedFromFee;
     EnumerableSet.AddressSet private _excludedFromReward;
+    mapping(address => AccountStatus) private accountsStatuses;
 
-    uint256 private _tTotal = 250 * 1e9 * (10**uint256(_decimals));
+    uint256 private _tTotal = 250 * 1e9 * 1e18;
     uint256 private _rTotal = (type(uint256).max - (type(uint256).max % _tTotal));
     uint256 private _tFeeTotal;
     uint256 private _tBurnTotal;
@@ -48,56 +46,49 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Toke
     uint256 private constant _tBurnPercent = 2;
     uint256 private constant _tLiquidityPercent = 2;
 
-    event IncludedInFee(address indexed account);
-    event ExcludedFromFee(address indexed account);
-    event IncludedInReward(address indexed account);
-    event ExcludedFromReward(address indexed account);
+    string public constant name = 'ULTI Coin';
+    string public constant symbol = 'ULTI';
+    uint8 public constant decimals = 18;
+
+    uint256 public accountLimit;
+    uint256 public singleTransferLimit;
+    uint256 public swapCooldownDuration;
+
+    event RewardExclusion(address indexed account, bool isExcluded);
+    event FeeExclusion(address indexed account, bool isExcluded);
+    event AccountLimitExclusion(address indexed account, bool isExcluded);
+    event TransferLimitExclusion(address indexed account, bool isExcluded);
 
     constructor(address owner, address router) TokensLiquify(router) {
         // Transfer ownership to given address
         transferOwnership(owner);
 
-        // Exclude the owner and this contract from the fee
-        _excludeFromFee(owner);
-        _excludeFromFee(address(this));
-
-        // Exclude the owner from transfer restrictions
-        _setTransferLimitExclusion(owner, true);
-        _setSwapCooldownExclusion(owner, true);
-        _setAccountLimitExclusion(owner, true);
+        // Exclude the owner and this contract from transfer restrictions
+        accountsStatuses[owner] = AccountStatus(true, true, true, false, 0);
+        accountsStatuses[address(this)] = AccountStatus(true, true, true, false, 0);
 
         // Exclude swap pair and swap router from account limit
-        _setAccountLimitExclusion(swapPair, true);
-        _setAccountLimitExclusion(address(swapRouter), true);
+        accountsStatuses[swapPair].accountLimitExcluded = true;
+        accountsStatuses[address(swapRouter)].accountLimitExcluded = true;
 
-        _setSingleTransferLimit(10 * 10e6 * (10**uint256(_decimals)));
-        _setAccountLimit(1 * 10e9 * (10**uint256(_decimals)));
-        _setMinAmountToLiquify(5000 * (10**uint256(_decimals)));
-        _setSwapCooldownDuration(1 minutes);
+        // Set initial settings
+        accountLimit = 1 * 10e9 * (10**uint256(decimals));
+        singleTransferLimit = 10 * 10e6 * (10**uint256(decimals));
+        swapCooldownDuration = 1 minutes;
+        minAmountToLiquify = 5000 * (10**uint256(decimals));
 
         // Assign initial supply to the owner
         _rOwned[owner] = _rTotal;
         emit Transfer(address(0), owner, _tTotal);
     }
 
-    function name() external pure returns (string memory) {
-        return _name;
-    }
-
-    function symbol() external pure returns (string memory) {
-        return _symbol;
-    }
-
-    function decimals() external pure returns (uint8) {
-        return _decimals;
-    }
-
     function allowance(address owner, address spender) external view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
-    function balanceOf(address account) external view override returns (uint256) {
-        return _balanceOf(account);
+    function balanceOf(address account) public view override returns (uint256) {
+        if (isExcludedFromReward(account)) return _tOwned[account];
+        return tokenFromReflection(_rOwned[account]);
     }
 
     function totalSupply() external view override returns (uint256) {
@@ -117,7 +108,15 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Toke
     }
 
     function isExcludedFromFee(address account) external view returns (bool) {
-        return _isExcludedFromFee[account];
+        return accountsStatuses[account].feeExcluded;
+    }
+
+    function isExcludedFromAccountLimit(address account) external view returns (bool) {
+        return accountsStatuses[account].accountLimitExcluded;
+    }
+
+    function isExcludedFromTransferLimit(address account) external view returns (bool) {
+        return accountsStatuses[account].transferLimitExcluded;
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
@@ -138,14 +137,20 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Toke
         _transfer(sender, recipient, amount);
 
         uint256 currentAllowance = _allowances[sender][_msgSender()];
-        require(currentAllowance >= amount, 'ERC20: transfer amount exceeds allowance');
+        require(currentAllowance >= amount, 'Transfer amount exceeds allowance');
         _approve(sender, _msgSender(), currentAllowance - amount);
 
         return true;
     }
 
-    function reflect(uint256 amount) external {
-        _reflect(_msgSender(), amount);
+    function reflect(uint256 tAmount) external {
+        address account = _msgSender();
+        require(!isExcludedFromReward(account), 'Reflect from excluded address');
+        require(balanceOf(account) >= tAmount, 'Reflect amount exceeds sender balance');
+
+        uint256 currentRate = _getRate();
+        _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
+        _reflectFeeAndBurn(tAmount, 0, currentRate);
     }
 
     function burn(uint256 amount) external {
@@ -154,7 +159,7 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Toke
 
     function burnFrom(address account, uint256 amount) external {
         uint256 currentAllowance = _allowances[account][_msgSender()];
-        require(currentAllowance >= amount, 'ERC20: burn amount exceeds allowance');
+        require(currentAllowance >= amount, 'Burn amount exceeds allowance');
         _approve(account, _msgSender(), currentAllowance - amount);
         _burn(account, amount);
     }
@@ -166,7 +171,7 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Toke
 
     function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
         uint256 currentAllowance = _allowances[_msgSender()][spender];
-        require(currentAllowance >= subtractedValue, 'ERC20: decreased allowance below zero');
+        require(currentAllowance >= subtractedValue, 'Decreased allowance below zero');
         _approve(_msgSender(), spender, currentAllowance - subtractedValue);
 
         return true;
@@ -191,81 +196,74 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Toke
 
     // Owner functions
 
+    function setAccountLimit(uint256 amount) external onlyOwner {
+        accountLimit = amount;
+    }
+
+    function setSingleTransferLimit(uint256 amount) external onlyOwner {
+        singleTransferLimit = amount;
+    }
+
+    function setSwapCooldownDuration(uint256 duration) external onlyOwner {
+        swapCooldownDuration = duration;
+    }
+
     function includeInReward(address account) external onlyOwner() {
-        _includeInReward(account);
-    }
-
-    function includeInFee(address account) external onlyOwner() {
-        _includeInFee(account);
-    }
-
-    function excludeFromReward(address account) external onlyOwner() {
-        _excludeFromReward(account);
-    }
-
-    function excludeFromFee(address account) external onlyOwner() {
-        _excludeFromFee(account);
-    }
-
-    // Private functions
-
-    function _includeInReward(address account) private {
         if (_excludedFromReward.remove(account)) {
             _tOwned[account] = 0;
-            emit IncludedInReward(account);
+            emit RewardExclusion(account, false);
         }
     }
 
-    function _includeInFee(address account) private {
-        _isExcludedFromFee[account] = false;
-        emit IncludedInFee(account);
-    }
-
-    function _excludeFromReward(address account) private {
+    function excludeFromReward(address account) external onlyOwner() {
         require(account != address(this), 'Cannot exclude self contract');
         if (!_excludedFromReward.contains(account)) {
             if (_rOwned[account] > 0) {
                 _tOwned[account] = tokenFromReflection(_rOwned[account]);
             }
             _excludedFromReward.add(account);
-            emit ExcludedFromReward(account);
+            emit RewardExclusion(account, true);
         }
     }
 
-    function _excludeFromFee(address account) private {
-        _isExcludedFromFee[account] = true;
-        emit ExcludedFromFee(account);
+    function setAccountFeeExclusion(address account, bool isExcluded) external onlyOwner {
+        accountsStatuses[account].feeExcluded = isExcluded;
+        emit FeeExclusion(account, isExcluded);
     }
 
-    function _balanceOf(address account) private view returns (uint256) {
-        if (isExcludedFromReward(account)) return _tOwned[account];
-        return tokenFromReflection(_rOwned[account]);
+    function setAccountLimitExclusion(address account, bool isExcluded) external onlyOwner {
+        accountsStatuses[account].accountLimitExcluded = isExcluded;
+        emit AccountLimitExclusion(account, isExcluded);
     }
+
+    function setTransferLimitExclusion(address account, bool isExcluded) external onlyOwner {
+        accountsStatuses[account].transferLimitExcluded = isExcluded;
+        emit TransferLimitExclusion(account, isExcluded);
+    }
+
+    function setBotsBlacklisting(address[] memory bots, bool isBlacklisted) public onlyOwner {
+        for (uint256 i = 0; i < bots.length; i++) {
+            accountsStatuses[bots[i]].blacklistedBot = isBlacklisted;
+        }
+    }
+
+    // Private functions
 
     function _approve(
         address owner,
         address spender,
         uint256 amount
     ) private {
-        require(owner != address(0), 'ERC20: approve from the zero address');
-        require(spender != address(0), 'ERC20: approve to the zero address');
+        require(owner != address(0), 'Approve from the zero address');
+        require(spender != address(0), 'Approve to the zero address');
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
 
-    function _reflect(address account, uint256 tAmount) private {
-        require(!isExcludedFromReward(account), 'UltiCoin: reflect from excluded address');
-        require(_balanceOf(account) >= tAmount, 'UltiCoin: reflect amount exceeds sender balance');
-
-        uint256 currentRate = _getRate();
-        _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
-        _reflectFeeAndBurn(tAmount, 0, currentRate);
-    }
-
     function _burn(address account, uint256 tAmount) private {
-        require(account != address(0), 'ERC20: burn from the zero address');
-        require(_balanceOf(account) >= tAmount, 'ERC20: burn amount exceeds balance');
+        require(account != address(0), 'Burn from the zero address');
+        require(balanceOf(account) >= tAmount, 'Burn amount exceeds balance');
 
         uint256 currentRate = _getRate();
         _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
@@ -281,16 +279,13 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Toke
         address recipient,
         uint256 amount
     ) private {
-        require(sender != address(0), 'ERC20: transfer from the zero address');
-        require(recipient != address(0), 'ERC20: transfer to the zero address');
-        require(amount > 0, 'ERC20: transfer amount must be greater than zero');
+        require(sender != address(0), 'Transfer from the zero address');
+        require(recipient != address(0), 'Transfer to the zero address');
+        require(amount > 0, 'Transfer amount must be greater than zero');
 
         _checkBotBlacklisting(sender, recipient);
-
         _checkTransferLimit(sender, recipient, amount);
-
-        _checkAccountLimit(recipient, amount, _balanceOf(recipient));
-
+        _checkAccountLimit(recipient, amount, balanceOf(recipient));
         _checkSwapCooldown(sender, recipient, swapPair, address(swapRouter));
 
         _liquifyTokens(sender);
@@ -298,8 +293,45 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Toke
         _tokenTransfer(sender, recipient, amount);
     }
 
+    function _checkBotBlacklisting(address sender, address recipient) private view {
+        require(!accountsStatuses[sender].blacklistedBot, 'Sender is blacklisted');
+        require(!accountsStatuses[recipient].blacklistedBot, 'Recipient is blacklisted');
+    }
+
+    function _checkTransferLimit(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) private view {
+        if (!accountsStatuses[sender].transferLimitExcluded && !accountsStatuses[recipient].transferLimitExcluded) {
+            require(amount <= singleTransferLimit, 'Transfer amount exceeds the limit');
+        }
+    }
+
+    function _checkAccountLimit(
+        address recipient,
+        uint256 amount,
+        uint256 recipientBalance
+    ) private view {
+        if (!accountsStatuses[recipient].accountLimitExcluded) {
+            require(recipientBalance + amount <= accountLimit, 'Recipient has reached account tokens limit');
+        }
+    }
+
+    function _checkSwapCooldown(
+        address sender,
+        address recipient,
+        address swapPair,
+        address swapRouter
+    ) private {
+        if (swapCooldownDuration > 0 && sender == swapPair && recipient != swapRouter) {
+            require(accountsStatuses[recipient].swapCooldown < block.timestamp, 'Swap is cooling down');
+            accountsStatuses[recipient].swapCooldown = block.timestamp + swapCooldownDuration;
+        }
+    }
+
     function _liquifyTokens(address sender) private {
-        uint256 amountToLiquify = _balanceOf(address(this));
+        uint256 amountToLiquify = balanceOf(address(this));
         if (
             isLiquifyingEnabled && !_isInSwapAndLiquify() && sender != swapPair && amountToLiquify >= minAmountToLiquify
         ) {
@@ -317,7 +349,7 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Toke
         address recipient,
         uint256 amount
     ) private {
-        bool disableFee = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
+        bool disableFee = accountsStatuses[sender].feeExcluded || accountsStatuses[recipient].feeExcluded;
 
         if (isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
             _transferFromExcluded(sender, recipient, amount, disableFee);

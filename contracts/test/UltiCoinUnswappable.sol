@@ -2,9 +2,8 @@
 
 pragma solidity ^0.8.6;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/utils/Address.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 /*
@@ -18,24 +17,26 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoinUnswappable is Context, IERC20, Ownable {
-    using Address for address;
+contract UltiCoinUnswappable is IERC20, Context, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    string private constant _name = 'ULTI Coin';
-    string private constant _symbol = 'ULTI';
-    uint8 private constant _decimals = 18;
+    struct AccountStatus {
+        bool feeExcluded;
+        bool accountLimitExcluded;
+        bool transferLimitExcluded;
+        bool blacklistedBot;
+        uint256 swapCooldown;
+    }
 
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => mapping(address => uint256)) private _allowances;
 
-    mapping(address => bool) private _isExcludedFromFee;
     EnumerableSet.AddressSet private _excludedFromReward;
+    mapping(address => AccountStatus) private accountsStatuses;
 
-    uint256 private constant MAX = ~uint256(0);
-    uint256 private _tTotal = 250 * 1e9 * (10**uint256(_decimals));
-    uint256 private _rTotal = (MAX - (MAX % _tTotal));
+    uint256 private _tTotal = 250 * 1e9 * 1e18;
+    uint256 private _rTotal = (type(uint256).max - (type(uint256).max % _tTotal));
     uint256 private _tFeeTotal;
     uint256 private _tBurnTotal;
     uint256 private _tLiquidityTotal;
@@ -44,55 +45,81 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
     uint256 private constant _tBurnPercent = 2;
     uint256 private constant _tLiquidityPercent = 2;
 
-    event IncludedInFee(address indexed account);
-    event ExcludedFromFee(address indexed account);
-    event IncludedInReward(address indexed account);
-    event ExcludedFromReward(address indexed account);
+    string public constant name = 'ULTI Coin';
+    string public constant symbol = 'ULTI';
+    uint8 public constant decimals = 18;
+
+    uint256 public accountLimit;
+    uint256 public singleTransferLimit;
+    uint256 public swapCooldownDuration;
+
+    event RewardExclusion(address indexed account, bool isExcluded);
+    event FeeExclusion(address indexed account, bool isExcluded);
+    event AccountLimitExclusion(address indexed account, bool isExcluded);
+    event TransferLimitExclusion(address indexed account, bool isExcluded);
 
     constructor(address owner) {
         // Transfer ownership to given address
         transferOwnership(owner);
-        // Assign whole supply to the owner
+
+        // Exclude the owner and this contract from transfer restrictions
+        accountsStatuses[owner] = AccountStatus(true, true, true, false, 0);
+        accountsStatuses[address(this)] = AccountStatus(true, true, true, false, 0);
+
+        // Set initial settings
+        accountLimit = 1 * 10e9 * (10**uint256(decimals));
+        singleTransferLimit = 10 * 10e6 * (10**uint256(decimals));
+        swapCooldownDuration = 1 minutes;
+
+        // Assign initial supply to the owner
         _rOwned[owner] = _rTotal;
         emit Transfer(address(0), owner, _tTotal);
-        // Exclude owner and this contract from fee
-        _isExcludedFromFee[owner] = true;
-        _isExcludedFromFee[address(this)] = true;
-        emit ExcludedFromFee(owner);
-        emit ExcludedFromFee(address(this));
-    }
-
-    function name() public pure returns (string memory) {
-        return _name;
-    }
-
-    function symbol() public pure returns (string memory) {
-        return _symbol;
-    }
-
-    function decimals() public pure returns (uint8) {
-        return _decimals;
-    }
-
-    function totalSupply() public view override returns (uint256) {
-        return _tTotal;
-    }
-
-    function balanceOf(address account) external view override returns (uint256) {
-        return _balanceOf(account);
-    }
-
-    function transfer(address recipient, uint256 amount) external override returns (bool) {
-        _transfer(_msgSender(), recipient, amount);
-        return true;
     }
 
     function allowance(address owner, address spender) external view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
+    function balanceOf(address account) public view override returns (uint256) {
+        if (isExcludedFromReward(account)) return _tOwned[account];
+        return tokenFromReflection(_rOwned[account]);
+    }
+
+    function totalSupply() external view override returns (uint256) {
+        return _tTotal;
+    }
+
+    function totalFees() external view returns (uint256) {
+        return _tFeeTotal;
+    }
+
+    function totalBurned() external view returns (uint256) {
+        return _tBurnTotal;
+    }
+
+    function isExcludedFromReward(address account) public view returns (bool) {
+        return _excludedFromReward.contains(account);
+    }
+
+    function isExcludedFromFee(address account) external view returns (bool) {
+        return accountsStatuses[account].feeExcluded;
+    }
+
+    function isExcludedFromAccountLimit(address account) external view returns (bool) {
+        return accountsStatuses[account].accountLimitExcluded;
+    }
+
+    function isExcludedFromTransferLimit(address account) external view returns (bool) {
+        return accountsStatuses[account].transferLimitExcluded;
+    }
+
     function approve(address spender, uint256 amount) external override returns (bool) {
         _approve(_msgSender(), spender, amount);
+        return true;
+    }
+
+    function transfer(address recipient, uint256 amount) external override returns (bool) {
+        _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
@@ -104,10 +131,31 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         _transfer(sender, recipient, amount);
 
         uint256 currentAllowance = _allowances[sender][_msgSender()];
-        require(currentAllowance >= amount, 'ERC20: transfer amount exceeds allowance');
+        require(currentAllowance >= amount, 'Transfer amount exceeds allowance');
         _approve(sender, _msgSender(), currentAllowance - amount);
 
         return true;
+    }
+
+    function reflect(uint256 tAmount) external {
+        address account = _msgSender();
+        require(!isExcludedFromReward(account), 'Reflect from excluded address');
+        require(balanceOf(account) >= tAmount, 'Reflect amount exceeds sender balance');
+
+        uint256 currentRate = _getRate();
+        _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
+        _reflectFeeAndBurn(tAmount, 0, currentRate);
+    }
+
+    function burn(uint256 amount) external {
+        _burn(_msgSender(), amount);
+    }
+
+    function burnFrom(address account, uint256 amount) external {
+        uint256 currentAllowance = _allowances[account][_msgSender()];
+        require(currentAllowance >= amount, 'Burn amount exceeds allowance');
+        _approve(account, _msgSender(), currentAllowance - amount);
+        _burn(account, amount);
     }
 
     function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
@@ -117,50 +165,13 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
 
     function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
         uint256 currentAllowance = _allowances[_msgSender()][spender];
-        require(currentAllowance >= subtractedValue, 'ERC20: decreased allowance below zero');
+        require(currentAllowance >= subtractedValue, 'Decreased allowance below zero');
         _approve(_msgSender(), spender, currentAllowance - subtractedValue);
 
         return true;
     }
 
-    function isExcludedFromReward(address account) public view returns (bool) {
-        return _excludedFromReward.contains(account);
-    }
-
-    function isExcludedFromFee(address account) public view returns (bool) {
-        return _isExcludedFromFee[account];
-    }
-
-    function totalFees() public view returns (uint256) {
-        return _tFeeTotal;
-    }
-
-    function totalBurned() public view returns (uint256) {
-        return _tBurnTotal;
-    }
-
-    function reflect(uint256 tAmount) external {
-        address sender = _msgSender();
-        require(!isExcludedFromReward(sender), 'Excluded addresses cannot call this function');
-        require(_balanceOf(sender) >= tAmount, 'Reflect amount exceeds sender balance');
-
-        uint256 currentRate = _getRate();
-        _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
-        _reflectFeeAndBurn(tAmount, 0, currentRate);
-    }
-
-    function burn(uint256 amount) public {
-        _burn(_msgSender(), amount);
-    }
-
-    function burnFrom(address account, uint256 amount) public {
-        uint256 currentAllowance = _allowances[account][_msgSender()];
-        require(currentAllowance >= amount, 'ERC20: burn amount exceeds allowance');
-        _approve(account, _msgSender(), currentAllowance - amount);
-        _burn(account, amount);
-    }
-
-    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns (uint256) {
+    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) external view returns (uint256) {
         require(tAmount <= _tTotal, 'Amount must be less than supply');
         uint256 currentRate = _getRate();
         if (!deductTransferFee) {
@@ -177,55 +188,76 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         return rAmount / currentRate;
     }
 
+    // Owner functions
+
+    function setAccountLimit(uint256 amount) external onlyOwner {
+        accountLimit = amount;
+    }
+
+    function setSingleTransferLimit(uint256 amount) external onlyOwner {
+        singleTransferLimit = amount;
+    }
+
+    function setSwapCooldownDuration(uint256 duration) external onlyOwner {
+        swapCooldownDuration = duration;
+    }
+
+    function includeInReward(address account) external onlyOwner() {
+        if (_excludedFromReward.remove(account)) {
+            _tOwned[account] = 0;
+            emit RewardExclusion(account, false);
+        }
+    }
+
     function excludeFromReward(address account) external onlyOwner() {
-        // require(account != 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F, 'We can not exclude Pancake router.');
         require(account != address(this), 'Cannot exclude self contract');
         if (!_excludedFromReward.contains(account)) {
             if (_rOwned[account] > 0) {
                 _tOwned[account] = tokenFromReflection(_rOwned[account]);
             }
             _excludedFromReward.add(account);
-            emit ExcludedFromReward(account);
+            emit RewardExclusion(account, true);
         }
     }
 
-    function includeInReward(address account) external onlyOwner() {
-        if (_excludedFromReward.remove(account)) {
-            _tOwned[account] = 0;
-            emit IncludedInReward(account);
+    function setAccountFeeExclusion(address account, bool isExcluded) external onlyOwner {
+        accountsStatuses[account].feeExcluded = isExcluded;
+        emit FeeExclusion(account, isExcluded);
+    }
+
+    function setAccountLimitExclusion(address account, bool isExcluded) external onlyOwner {
+        accountsStatuses[account].accountLimitExcluded = isExcluded;
+        emit AccountLimitExclusion(account, isExcluded);
+    }
+
+    function setTransferLimitExclusion(address account, bool isExcluded) external onlyOwner {
+        accountsStatuses[account].transferLimitExcluded = isExcluded;
+        emit TransferLimitExclusion(account, isExcluded);
+    }
+
+    function setBotsBlacklisting(address[] memory bots, bool isBlacklisted) public onlyOwner {
+        for (uint256 i = 0; i < bots.length; i++) {
+            accountsStatuses[bots[i]].blacklistedBot = isBlacklisted;
         }
     }
 
-    function excludeFromFee(address account) external onlyOwner() {
-        _isExcludedFromFee[account] = true;
-        emit ExcludedFromFee(account);
-    }
-
-    function includeInFee(address account) external onlyOwner() {
-        _isExcludedFromFee[account] = false;
-        emit IncludedInFee(account);
-    }
-
-    function _balanceOf(address account) private view returns (uint256) {
-        if (isExcludedFromReward(account)) return _tOwned[account];
-        return tokenFromReflection(_rOwned[account]);
-    }
+    // Private functions
 
     function _approve(
         address owner,
         address spender,
         uint256 amount
     ) private {
-        require(owner != address(0), 'ERC20: approve from the zero address');
-        require(spender != address(0), 'ERC20: approve to the zero address');
+        require(owner != address(0), 'Approve from the zero address');
+        require(spender != address(0), 'Approve to the zero address');
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
 
-    function _burn(address account, uint256 tAmount) internal {
-        require(account != address(0), 'ERC20: burn from the zero address');
-        require(_balanceOf(account) >= tAmount, 'ERC20: burn amount exceeds balance');
+    function _burn(address account, uint256 tAmount) private {
+        require(account != address(0), 'Burn from the zero address');
+        require(balanceOf(account) >= tAmount, 'Burn amount exceeds balance');
 
         uint256 currentRate = _getRate();
         _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
@@ -241,11 +273,48 @@ contract UltiCoinUnswappable is Context, IERC20, Ownable {
         address recipient,
         uint256 amount
     ) private {
-        require(sender != address(0), 'ERC20: transfer from the zero address');
-        require(recipient != address(0), 'ERC20: transfer to the zero address');
+        require(sender != address(0), 'Transfer from the zero address');
+        require(recipient != address(0), 'Transfer to the zero address');
         require(amount > 0, 'Transfer amount must be greater than zero');
 
-        bool disableFee = _isExcludedFromFee[sender] || _isExcludedFromFee[recipient];
+        _checkBotBlacklisting(sender, recipient);
+        _checkTransferLimit(sender, recipient, amount);
+        _checkAccountLimit(recipient, amount, balanceOf(recipient));
+
+        _tokenTransfer(sender, recipient, amount);
+    }
+
+    function _checkBotBlacklisting(address sender, address recipient) private view {
+        require(!accountsStatuses[sender].blacklistedBot, 'Sender is blacklisted');
+        require(!accountsStatuses[recipient].blacklistedBot, 'Recipient is blacklisted');
+    }
+
+    function _checkTransferLimit(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) private view {
+        if (!accountsStatuses[sender].transferLimitExcluded && !accountsStatuses[recipient].transferLimitExcluded) {
+            require(amount <= singleTransferLimit, 'Transfer amount exceeds the limit');
+        }
+    }
+
+    function _checkAccountLimit(
+        address recipient,
+        uint256 amount,
+        uint256 recipientBalance
+    ) private view {
+        if (!accountsStatuses[recipient].accountLimitExcluded) {
+            require(recipientBalance + amount <= accountLimit, 'Recipient has reached account tokens limit');
+        }
+    }
+
+    function _tokenTransfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) private {
+        bool disableFee = accountsStatuses[sender].feeExcluded || accountsStatuses[recipient].feeExcluded;
 
         if (isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
             _transferFromExcluded(sender, recipient, amount, disableFee);

@@ -91,7 +91,7 @@ describe('UltiCoin', () => {
           await this.token.connect(owner).transfer(recipient.address, burnAmount)
           expect(await this.token.balanceOf(recipient.address)).to.equal(burnAmount)
           await expect(this.token.connect(recipient).burn(burnAmount.add(1))).to.be.revertedWith(
-            'ERC20: burn amount exceeds balance'
+            'Burn amount exceeds balance'
           )
         })
       })
