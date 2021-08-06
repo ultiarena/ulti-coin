@@ -3,7 +3,7 @@
 // Source:
 // https://github.com/Uniswap/uniswap-v2-periphery/blob/master/contracts/interfaces/IUniswapV2Router01.sol
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.6;
 
 interface IUniswapV2Router01 {
     function factory() external pure returns (address);
