@@ -8,7 +8,7 @@ import '../interfaces/IUniswapV2Router02.sol';
 import '@openzeppelin/contracts/utils/Context.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
-contract Liquify is Context, Ownable {
+contract TokensLiquify is Context, Ownable {
     bool private isInSwapAndLiquify = false;
 
     IUniswapV2Router02 public swapRouter;

@@ -4,8 +4,8 @@ pragma solidity ^0.8.6;
 
 import './extensions/AccountLimit.sol';
 import './extensions/BotBlacklist.sol';
-import './extensions/Liquify.sol';
 import './extensions/SwapCooldown.sol';
+import './extensions/TokensLiquify.sol';
 import './extensions/TransferLimit.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -23,7 +23,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Liquify, SwapCooldown, BotBlacklist {
+contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, TokensLiquify, SwapCooldown, BotBlacklist {
     using Address for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -53,7 +53,7 @@ contract UltiCoin is IERC20, Context, Ownable, AccountLimit, TransferLimit, Liqu
     event IncludedInReward(address indexed account);
     event ExcludedFromReward(address indexed account);
 
-    constructor(address owner, address router) Liquify(router) {
+    constructor(address owner, address router) TokensLiquify(router) {
         // Transfer ownership to given address
         transferOwnership(owner);
 
