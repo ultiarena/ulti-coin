@@ -33,7 +33,7 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     mapping(address => mapping(address => uint256)) private _allowances;
 
     EnumerableSet.AddressSet private _excludedFromReward;
-    mapping(address => AccountStatus) private accountsStatuses;
+    mapping(address => AccountStatus) private statuses;
 
     uint256 private _tTotal = 250 * 1e9 * 1e18;
     uint256 private _rTotal = (type(uint256).max - (type(uint256).max % _tTotal));
@@ -41,9 +41,9 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     uint256 private _tBurnTotal;
     uint256 private _tLiquidityTotal;
 
-    uint256 private constant _tFeePercent = 2;
-    uint256 private constant _tBurnPercent = 2;
-    uint256 private constant _tLiquidityPercent = 2;
+    uint256 private _tFeePercent = 2;
+    uint256 private _tBurnPercent = 2;
+    uint256 private _tLiquidityPercent = 2;
 
     string public constant name = 'ULTI Coin';
     string public constant symbol = 'ULTI';
@@ -63,8 +63,8 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
         transferOwnership(owner);
 
         // Exclude the owner and this contract from transfer restrictions
-        accountsStatuses[owner] = AccountStatus(true, true, true, false, 0);
-        accountsStatuses[address(this)] = AccountStatus(true, true, true, false, 0);
+        statuses[owner] = AccountStatus(true, true, true, false, 0);
+        statuses[address(this)] = AccountStatus(true, true, true, false, 0);
 
         // Set initial settings
         accountLimit = 200 * 10e6 * (10**uint256(decimals));
@@ -101,15 +101,15 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     }
 
     function isExcludedFromFee(address account) external view returns (bool) {
-        return accountsStatuses[account].feeExcluded;
+        return statuses[account].feeExcluded;
     }
 
     function isExcludedFromAccountLimit(address account) external view returns (bool) {
-        return accountsStatuses[account].accountLimitExcluded;
+        return statuses[account].accountLimitExcluded;
     }
 
     function isExcludedFromTransferLimit(address account) external view returns (bool) {
-        return accountsStatuses[account].transferLimitExcluded;
+        return statuses[account].transferLimitExcluded;
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
@@ -183,6 +183,16 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
 
     // Owner functions
 
+    function setTax(
+        uint256 feePercent,
+        uint256 burnPercent,
+        uint256 liquidityPercent
+    ) external onlyOwner {
+        _tFeePercent = feePercent;
+        _tBurnPercent = burnPercent;
+        _tLiquidityPercent = liquidityPercent;
+    }
+
     function setAccountLimit(uint256 amount) external onlyOwner {
         accountLimit = amount;
     }
@@ -214,23 +224,23 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     }
 
     function setAccountFeeExclusion(address account, bool isExcluded) external onlyOwner {
-        accountsStatuses[account].feeExcluded = isExcluded;
+        statuses[account].feeExcluded = isExcluded;
         emit FeeExclusion(account, isExcluded);
     }
 
     function setAccountLimitExclusion(address account, bool isExcluded) external onlyOwner {
-        accountsStatuses[account].accountLimitExcluded = isExcluded;
+        statuses[account].accountLimitExcluded = isExcluded;
         emit AccountLimitExclusion(account, isExcluded);
     }
 
     function setTransferLimitExclusion(address account, bool isExcluded) external onlyOwner {
-        accountsStatuses[account].transferLimitExcluded = isExcluded;
+        statuses[account].transferLimitExcluded = isExcluded;
         emit TransferLimitExclusion(account, isExcluded);
     }
 
     function setBotsBlacklisting(address[] memory bots, bool isBlacklisted) external onlyOwner {
         for (uint256 i = 0; i < bots.length; i++) {
-            accountsStatuses[bots[i]].blacklistedBot = isBlacklisted;
+            statuses[bots[i]].blacklistedBot = isBlacklisted;
         }
     }
 
@@ -287,8 +297,8 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     }
 
     function _checkBotBlacklisting(address sender, address recipient) private view {
-        require(!accountsStatuses[sender].blacklistedBot, 'Sender is blacklisted');
-        require(!accountsStatuses[recipient].blacklistedBot, 'Recipient is blacklisted');
+        require(!statuses[sender].blacklistedBot, 'Sender is blacklisted');
+        require(!statuses[recipient].blacklistedBot, 'Recipient is blacklisted');
     }
 
     function _checkTransferLimit(
@@ -296,7 +306,7 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
         address recipient,
         uint256 amount
     ) private view {
-        if (!accountsStatuses[sender].transferLimitExcluded && !accountsStatuses[recipient].transferLimitExcluded) {
+        if (!statuses[sender].transferLimitExcluded && !statuses[recipient].transferLimitExcluded) {
             require(amount <= singleTransferLimit, 'Transfer amount exceeds the limit');
         }
     }
@@ -306,7 +316,7 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
         uint256 amount,
         uint256 recipientBalance
     ) private view {
-        if (!accountsStatuses[recipient].accountLimitExcluded) {
+        if (!statuses[recipient].accountLimitExcluded) {
             require(recipientBalance + amount <= accountLimit, 'Recipient has reached account tokens limit');
         }
     }
@@ -316,7 +326,7 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
         address recipient,
         uint256 amount
     ) private {
-        bool disableFee = accountsStatuses[sender].feeExcluded || accountsStatuses[recipient].feeExcluded;
+        bool disableFee = statuses[sender].feeExcluded || statuses[recipient].feeExcluded;
 
         if (isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
             _transferFromExcluded(sender, recipient, amount, disableFee);
@@ -435,7 +445,7 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
 
     function _getValues(uint256 tAmount, uint256 currentRate)
         private
-        pure
+        view
         returns (
             uint256,
             uint256,
@@ -453,7 +463,7 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
         bool disableFee
     )
         private
-        pure
+        view
         returns (
             uint256,
             uint256,
@@ -474,7 +484,7 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
 
     function _getTValues(uint256 tAmount, bool disableFee)
         private
-        pure
+        view
         returns (
             uint256,
             uint256,
