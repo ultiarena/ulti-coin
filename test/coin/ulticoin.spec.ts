@@ -1,8 +1,8 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCoinUnswappable__factory, UltiCoinUnswappable } from '../../typechain'
+import { UltiCoinNoLiquify__factory, UltiCoinNoLiquify } from '../../typechain'
 import { solidity } from 'ethereum-waffle'
-import { DECIMALS, MAX_SUPPLY, NAME, SYMBOL } from '../common'
+import { DECIMALS, INITIAL_SUPPLY, NAME, SYMBOL } from '../common'
 import { BigNumber, utils } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { parseEther } from 'ethers/lib/utils'
@@ -20,7 +20,7 @@ describe('UltiCoin', () => {
   context('once deployed', async function () {
     beforeEach(async function () {
       ;[deployer, owner, wallet, recipient, purchaser, ...addrs] = await ethers.getSigners()
-      const tokenFactory = (await ethers.getContractFactory('UltiCoinUnswappable')) as UltiCoinUnswappable__factory
+      const tokenFactory = (await ethers.getContractFactory('UltiCoinNoLiquify')) as UltiCoinNoLiquify__factory
       this.token = await tokenFactory.connect(deployer).deploy(owner.address)
     })
 
@@ -36,8 +36,8 @@ describe('UltiCoin', () => {
       expect(await this.token.decimals()).to.equal(DECIMALS)
     })
 
-    it(`has set total supply to ${utils.formatEther(MAX_SUPPLY)}`, async function () {
-      expect(await this.token.totalSupply()).to.equal(MAX_SUPPLY)
+    it(`has set total supply to ${utils.formatEther(INITIAL_SUPPLY)}`, async function () {
+      expect(await this.token.totalSupply()).to.equal(INITIAL_SUPPLY)
     })
 
     it(`has set owner`, async function () {
@@ -45,7 +45,7 @@ describe('UltiCoin', () => {
     })
 
     it('should transfer all tokens to the owner', async function () {
-      expect(await this.token.balanceOf(await this.token.owner())).to.equal(MAX_SUPPLY)
+      expect(await this.token.balanceOf(owner.address)).to.equal(INITIAL_SUPPLY)
     })
 
     it('should exclude itself from the fee', async function () {
@@ -59,7 +59,7 @@ describe('UltiCoin', () => {
     context('burning tokens', async function () {
       describe('burn', function () {
         const burnAmount = parseEther('50')
-        const ownerBalance = BigNumber.from(MAX_SUPPLY)
+        const ownerBalance = BigNumber.from(INITIAL_SUPPLY)
 
         it('should decrease owner balance', async function () {
           await this.token.connect(owner).burn(burnAmount)
@@ -68,7 +68,7 @@ describe('UltiCoin', () => {
 
         it('should decrease total supply', async function () {
           await this.token.connect(owner).burn(burnAmount)
-          expect(await this.token.connect(owner).totalSupply()).to.equal(BigNumber.from(MAX_SUPPLY).sub(burnAmount))
+          expect(await this.token.connect(owner).totalSupply()).to.equal(BigNumber.from(INITIAL_SUPPLY).sub(burnAmount))
         })
 
         it('should decrease not excluded address tokens', async function () {
@@ -92,6 +92,74 @@ describe('UltiCoin', () => {
           expect(await this.token.balanceOf(recipient.address)).to.equal(burnAmount)
           await expect(this.token.connect(recipient).burn(burnAmount.add(1))).to.be.revertedWith(
             'Burn amount exceeds balance'
+          )
+        })
+      })
+    })
+
+    context('reflecting tokens', async function () {
+      describe('reflect', function () {
+        const transferAmount = parseEther('50')
+        const reflectAmount = parseEther('1')
+        const initialSupply = BigNumber.from(INITIAL_SUPPLY)
+
+        it('should not decrease total supply', async function () {
+          await this.token.connect(owner).reflect(reflectAmount)
+          expect(await this.token.connect(owner).totalSupply()).to.equal(initialSupply)
+        })
+
+        it('should not decrease owner balance when one holder', async function () {
+          await this.token.connect(owner).reflect(reflectAmount)
+          expect(await this.token.connect(owner).balanceOf(owner.address)).to.equal(initialSupply)
+        })
+
+        it('should decrease owner balance when other holders', async function () {
+          await this.token.connect(owner).transfer(recipient.address, transferAmount)
+          expect(await this.token.balanceOf(recipient.address)).to.equal(transferAmount)
+
+          await this.token.connect(owner).reflect(reflectAmount)
+          const recipientBalance = await this.token.connect(owner).balanceOf(recipient.address)
+          const ownerBalance = await this.token.connect(owner).balanceOf(owner.address)
+
+          expect(recipientBalance).to.be.gt(transferAmount)
+          expect(ownerBalance).to.be.gt(ownerBalance.sub(transferAmount).sub(reflectAmount))
+
+          const delta = BigNumber.from(1)
+          expect(ownerBalance.add(recipientBalance)).to.be.gte(initialSupply.sub(delta))
+        })
+
+        it('should decrease not excluded address tokens', async function () {
+          await this.token.connect(owner).transfer(recipient.address, transferAmount)
+          expect(await this.token.balanceOf(recipient.address)).to.equal(transferAmount)
+
+          await this.token.connect(recipient).reflect(reflectAmount)
+          expect(await this.token.balanceOf(recipient.address)).to.be.gt(transferAmount.sub(reflectAmount))
+          expect(await this.token.balanceOf(recipient.address)).to.be.lt(transferAmount)
+        })
+
+        it('should change other balances', async function () {
+          const ownerBalance = BigNumber.from(INITIAL_SUPPLY)
+          await this.token.connect(owner).transfer(recipient.address, transferAmount)
+          expect(await this.token.balanceOf(recipient.address)).to.equal(transferAmount)
+
+          await this.token.connect(recipient).reflect(reflectAmount)
+          expect(await this.token.balanceOf(owner.address)).to.be.gt(ownerBalance.sub(transferAmount))
+          expect(await this.token.balanceOf(recipient.address)).to.be.gt(transferAmount.sub(reflectAmount))
+        })
+
+        it('reverts on amount exceeding balance', async function () {
+          await this.token.connect(owner).transfer(recipient.address, transferAmount)
+          expect(await this.token.balanceOf(recipient.address)).to.equal(transferAmount)
+          await expect(this.token.connect(recipient).reflect(transferAmount.add(1))).to.be.revertedWith(
+            'Reflect amount exceeds sender balance'
+          )
+        })
+
+        it('reverts when called by excluded address', async function () {
+          await this.token.connect(owner).transfer(recipient.address, transferAmount)
+          await this.token.connect(owner).excludeFromReward(recipient.address)
+          await expect(this.token.connect(recipient).reflect(transferAmount)).to.be.revertedWith(
+            'Reflect from excluded address'
           )
         })
       })

@@ -72,7 +72,7 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         accountsStatuses[address(swapRouter)].accountLimitExcluded = true;
 
         // Set initial settings
-        accountLimit = 1 * 10e9 * (10**uint256(decimals));
+        accountLimit = 200 * 10e6 * (10**uint256(decimals));
         singleTransferLimit = 10 * 10e6 * (10**uint256(decimals));
         swapCooldownDuration = 1 minutes;
         minAmountToLiquify = 5000 * (10**uint256(decimals));
@@ -86,9 +86,8 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         return _allowances[owner][spender];
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
-        if (isExcludedFromReward(account)) return _tOwned[account];
-        return tokenFromReflection(_rOwned[account]);
+    function balanceOf(address account) external view override returns (uint256) {
+        return _balanceOf(account);
     }
 
     function totalSupply() external view override returns (uint256) {
@@ -146,7 +145,7 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
     function reflect(uint256 tAmount) external {
         address account = _msgSender();
         require(!isExcludedFromReward(account), 'Reflect from excluded address');
-        require(balanceOf(account) >= tAmount, 'Reflect amount exceeds sender balance');
+        require(_balanceOf(account) >= tAmount, 'Reflect amount exceeds sender balance');
 
         uint256 currentRate = _getRate();
         _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
@@ -188,12 +187,6 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         }
     }
 
-    function tokenFromReflection(uint256 rAmount) public view returns (uint256) {
-        require(rAmount <= _rTotal, 'Amount must be less than total reflections');
-        uint256 currentRate = _getRate();
-        return rAmount / currentRate;
-    }
-
     // Owner functions
 
     function setAccountLimit(uint256 amount) external onlyOwner {
@@ -208,18 +201,18 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         swapCooldownDuration = duration;
     }
 
-    function includeInReward(address account) external onlyOwner() {
+    function includeInReward(address account) external onlyOwner {
         if (_excludedFromReward.remove(account)) {
             _tOwned[account] = 0;
             emit RewardExclusion(account, false);
         }
     }
 
-    function excludeFromReward(address account) external onlyOwner() {
+    function excludeFromReward(address account) external onlyOwner {
         require(account != address(this), 'Cannot exclude self contract');
         if (!_excludedFromReward.contains(account)) {
             if (_rOwned[account] > 0) {
-                _tOwned[account] = tokenFromReflection(_rOwned[account]);
+                _tOwned[account] = _tokenFromReflection(_rOwned[account]);
             }
             _excludedFromReward.add(account);
             emit RewardExclusion(account, true);
@@ -241,13 +234,11 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         emit TransferLimitExclusion(account, isExcluded);
     }
 
-    function setBotsBlacklisting(address[] memory bots, bool isBlacklisted) public onlyOwner {
+    function setBotsBlacklisting(address[] memory bots, bool isBlacklisted) external onlyOwner {
         for (uint256 i = 0; i < bots.length; i++) {
             accountsStatuses[bots[i]].blacklistedBot = isBlacklisted;
         }
     }
-
-    // Private functions
 
     function _approve(
         address owner,
@@ -261,9 +252,14 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         emit Approval(owner, spender, amount);
     }
 
+    function _balanceOf(address account) private view returns (uint256) {
+        if (isExcludedFromReward(account)) return _tOwned[account];
+        return _tokenFromReflection(_rOwned[account]);
+    }
+
     function _burn(address account, uint256 tAmount) private {
         require(account != address(0), 'Burn from the zero address');
-        require(balanceOf(account) >= tAmount, 'Burn amount exceeds balance');
+        require(_balanceOf(account) >= tAmount, 'Burn amount exceeds balance');
 
         uint256 currentRate = _getRate();
         _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
@@ -272,6 +268,12 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         }
         _reflectFeeAndBurn(0, tAmount, currentRate);
         emit Transfer(account, address(0), tAmount);
+    }
+
+    function _tokenFromReflection(uint256 rAmount) private view returns (uint256) {
+        require(rAmount <= _rTotal, 'Amount must be less than total reflections');
+        uint256 currentRate = _getRate();
+        return rAmount / currentRate;
     }
 
     function _transfer(
@@ -285,7 +287,7 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
 
         _checkBotBlacklisting(sender, recipient);
         _checkTransferLimit(sender, recipient, amount);
-        _checkAccountLimit(recipient, amount, balanceOf(recipient));
+        _checkAccountLimit(recipient, amount, _balanceOf(recipient));
         _checkSwapCooldown(sender, recipient, swapPair, address(swapRouter));
 
         _liquifyTokens(sender);
@@ -331,7 +333,7 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
     }
 
     function _liquifyTokens(address sender) private {
-        uint256 amountToLiquify = balanceOf(address(this));
+        uint256 amountToLiquify = _balanceOf(address(this));
         if (
             isLiquifyingEnabled && !_isInSwapAndLiquify() && sender != swapPair && amountToLiquify >= minAmountToLiquify
         ) {
