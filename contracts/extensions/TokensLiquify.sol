@@ -11,7 +11,7 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 contract TokensLiquify is Context, Ownable {
     bool private isInSwapAndLiquify;
 
-    bool public isLiquifyingEnabled = true;
+    bool public isLiquifyingEnabled;
 
     IUniswapV2Router02 public swapRouter;
     address public swapPair;

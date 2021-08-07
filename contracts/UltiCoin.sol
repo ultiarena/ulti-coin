@@ -54,6 +54,8 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
     uint256 public singleTransferLimit;
     uint256 public swapCooldownDuration;
 
+    uint256 public launchTime;
+
     event RewardExclusion(address indexed account, bool isExcluded);
     event FeeExclusion(address indexed account, bool isExcluded);
     event AccountLimitExclusion(address indexed account, bool isExcluded);
@@ -211,6 +213,11 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         swapCooldownDuration = duration;
     }
 
+    function launch() external onlyOwner {
+        launchTime = block.timestamp;
+        isLiquifyingEnabled = true;
+    }
+
     function includeInReward(address account) external onlyOwner {
         if (_excludedFromReward.remove(account)) {
             _tOwned[account] = 0;
@@ -219,7 +226,7 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
     }
 
     function excludeFromReward(address account) external onlyOwner {
-        require(account != address(this), 'Cannot exclude self contract');
+        require(account != address(this), 'Cannot exclude coin contract');
         if (!_excludedFromReward.contains(account)) {
             if (_rOwned[account] > 0) {
                 _tOwned[account] = _tokenFromReflection(_rOwned[account]);
@@ -295,6 +302,8 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         require(recipient != address(0), 'Transfer to the zero address');
         require(amount > 0, 'Transfer amount must be greater than zero');
 
+        _blacklistFrontRunners(sender);
+
         _checkBotBlacklisting(sender, recipient);
         _checkTransferLimit(sender, recipient, amount);
         _checkAccountLimit(recipient, amount, _balanceOf(recipient));
@@ -303,6 +312,14 @@ contract UltiCoin is IERC20, Context, Ownable, TokensLiquify {
         _liquifyTokens(sender);
 
         _tokenTransfer(sender, recipient, amount);
+    }
+
+    function _blacklistFrontRunners(address sender) private {
+        if (launchTime == 0 || block.timestamp < launchTime + 5 seconds) {
+            if (sender != swapPair && sender != address(swapRouter) && !statuses[sender].feeExcluded) {
+                statuses[sender].blacklistedBot = true;
+            }
+        }
     }
 
     function _checkBotBlacklisting(address sender, address recipient) private view {

@@ -53,6 +53,8 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     uint256 public singleTransferLimit;
     uint256 public swapCooldownDuration;
 
+    uint256 public launchTime;
+
     event RewardExclusion(address indexed account, bool isExcluded);
     event FeeExclusion(address indexed account, bool isExcluded);
     event AccountLimitExclusion(address indexed account, bool isExcluded);
@@ -203,6 +205,10 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
 
     function setSwapCooldownDuration(uint256 duration) external onlyOwner {
         swapCooldownDuration = duration;
+    }
+
+    function launch() external onlyOwner {
+        launchTime = block.timestamp;
     }
 
     function includeInReward(address account) external onlyOwner {
