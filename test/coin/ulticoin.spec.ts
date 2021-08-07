@@ -157,7 +157,7 @@ describe('UltiCoin', () => {
 
         it('reverts when called by excluded address', async function () {
           await this.token.connect(owner).transfer(recipient.address, transferAmount)
-          await this.token.connect(owner).excludeFromReward(recipient.address)
+          await this.token.connect(owner).setRewardExclusion(recipient.address, true)
           await expect(this.token.connect(recipient).reflect(transferAmount)).to.be.revertedWith(
             'Reflect from excluded address'
           )

@@ -5,10 +5,9 @@ pragma solidity ^0.8.6;
 import '../interfaces/IUniswapV2Factory.sol';
 import '../interfaces/IUniswapV2Pair.sol';
 import '../interfaces/IUniswapV2Router02.sol';
-import '@openzeppelin/contracts/utils/Context.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
-contract TokensLiquify is Context, Ownable {
+contract TokensLiquify is Ownable {
     bool private isInSwapAndLiquify;
 
     bool public isLiquifyingEnabled;
@@ -18,14 +17,8 @@ contract TokensLiquify is Context, Ownable {
 
     uint256 public minAmountToLiquify;
 
-    event SwapPairCreated(address uniswapPair);
-    event LiquifyingSwitched(bool enabled);
     event TokensSwapped(uint256 tokensSwapped, uint256 ethReceived);
     event TokensLiquified(uint256 tokensLiquified, uint256 ethLiquified, uint256 lpMinted);
-
-    constructor(address routerAddress_) {
-        _setRouterAddress(routerAddress_);
-    }
 
     receive() external payable {}
 
@@ -35,7 +28,6 @@ contract TokensLiquify is Context, Ownable {
 
     function switchLiquifying() external onlyOwner {
         isLiquifyingEnabled = !isLiquifyingEnabled;
-        emit LiquifyingSwitched(isLiquifyingEnabled);
     }
 
     function setMinAmountToLiquify(uint256 amount) external onlyOwner {
@@ -48,6 +40,12 @@ contract TokensLiquify is Context, Ownable {
 
     function _isInSwapAndLiquify() internal view returns (bool) {
         return isInSwapAndLiquify;
+    }
+
+    function _setRouterAddress(address routerAddress_) internal {
+        IUniswapV2Router02 _swapRouter = IUniswapV2Router02(routerAddress_);
+        swapPair = IUniswapV2Factory(_swapRouter.factory()).createPair(address(this), _swapRouter.WETH());
+        swapRouter = _swapRouter;
     }
 
     function _swapAndLiquify(uint256 tokenAmount, address lpReceiver) internal {
@@ -75,7 +73,6 @@ contract TokensLiquify is Context, Ownable {
         uint256 newBalance = address(this).balance;
         uint256 ethReceived = newBalance - balance;
         emit TokensSwapped(tokenAmount, ethReceived);
-
         return ethReceived;
     }
 
@@ -94,12 +91,5 @@ contract TokensLiquify is Context, Ownable {
                 block.timestamp
             );
         emit TokensLiquified(amountToken, amountETH, liquidity);
-    }
-
-    function _setRouterAddress(address routerAddress_) private {
-        IUniswapV2Router02 _swapRouter = IUniswapV2Router02(routerAddress_);
-        swapPair = IUniswapV2Factory(_swapRouter.factory()).createPair(address(this), _swapRouter.WETH());
-        swapRouter = _swapRouter;
-        emit SwapPairCreated(swapPair);
     }
 }

@@ -115,12 +115,12 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
-        _approve(_msgSender(), spender, amount);
+        _approve(msg.sender, spender, amount);
         return true;
     }
 
     function transfer(address recipient, uint256 amount) external override returns (bool) {
-        _transfer(_msgSender(), recipient, amount);
+        _transfer(msg.sender, recipient, amount);
         return true;
     }
 
@@ -131,15 +131,15 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     ) external override returns (bool) {
         _transfer(sender, recipient, amount);
 
-        uint256 currentAllowance = _allowances[sender][_msgSender()];
+        uint256 currentAllowance = _allowances[sender][msg.sender];
         require(currentAllowance >= amount, 'Transfer amount exceeds allowance');
-        _approve(sender, _msgSender(), currentAllowance - amount);
+        _approve(sender, msg.sender, currentAllowance - amount);
 
         return true;
     }
 
     function reflect(uint256 tAmount) external {
-        address account = _msgSender();
+        address account = msg.sender;
         require(!isExcludedFromReward(account), 'Reflect from excluded address');
         require(_balanceOf(account) >= tAmount, 'Reflect amount exceeds sender balance');
 
@@ -149,25 +149,25 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     }
 
     function burn(uint256 amount) external {
-        _burn(_msgSender(), amount);
+        _burn(msg.sender, amount);
     }
 
     function burnFrom(address account, uint256 amount) external {
-        uint256 currentAllowance = _allowances[account][_msgSender()];
+        uint256 currentAllowance = _allowances[account][msg.sender];
         require(currentAllowance >= amount, 'Burn amount exceeds allowance');
-        _approve(account, _msgSender(), currentAllowance - amount);
+        _approve(account, msg.sender, currentAllowance - amount);
         _burn(account, amount);
     }
 
     function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
-        _approve(_msgSender(), spender, _allowances[_msgSender()][spender] + addedValue);
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
         return true;
     }
 
     function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
-        uint256 currentAllowance = _allowances[_msgSender()][spender];
+        uint256 currentAllowance = _allowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, 'Decreased allowance below zero');
-        _approve(_msgSender(), spender, currentAllowance - subtractedValue);
+        _approve(msg.sender, spender, currentAllowance - subtractedValue);
 
         return true;
     }
@@ -211,25 +211,23 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
         launchTime = block.timestamp;
     }
 
-    function includeInReward(address account) external onlyOwner {
-        if (_excludedFromReward.remove(account)) {
+    function setRewardExclusion(address account, bool isExcluded) external onlyOwner {
+        if (!isExcluded && _excludedFromReward.remove(account)) {
             _tOwned[account] = 0;
             emit RewardExclusion(account, false);
-        }
-    }
-
-    function excludeFromReward(address account) external onlyOwner {
-        require(account != address(this), 'Cannot exclude self contract');
-        if (!_excludedFromReward.contains(account)) {
-            if (_rOwned[account] > 0) {
-                _tOwned[account] = _tokenFromReflection(_rOwned[account]);
+        } else if (isExcluded) {
+            require(account != address(this), 'Cannot exclude coin contract');
+            if (!_excludedFromReward.contains(account)) {
+                if (_rOwned[account] > 0) {
+                    _tOwned[account] = _tokenFromReflection(_rOwned[account]);
+                }
+                _excludedFromReward.add(account);
+                emit RewardExclusion(account, true);
             }
-            _excludedFromReward.add(account);
-            emit RewardExclusion(account, true);
         }
     }
 
-    function setAccountFeeExclusion(address account, bool isExcluded) external onlyOwner {
+    function setFeeExclusion(address account, bool isExcluded) external onlyOwner {
         statuses[account].feeExcluded = isExcluded;
         emit FeeExclusion(account, isExcluded);
     }
