@@ -3,18 +3,16 @@
 pragma solidity ^0.8.6;
 
 import '../interfaces/IUniswapV2Factory.sol';
-import '../interfaces/IUniswapV2Pair.sol';
 import '../interfaces/IUniswapV2Router02.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 contract TokensLiquify is Ownable {
     bool private isInSwapAndLiquify;
 
-    bool public isLiquifyingEnabled;
-
     IUniswapV2Router02 public swapRouter;
     address public swapPair;
 
+    bool public isLiquifyingEnabled;
     uint256 public minAmountToLiquify;
 
     event TokensSwapped(uint256 tokensSwapped, uint256 ethReceived);
