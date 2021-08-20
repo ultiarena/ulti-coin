@@ -38,17 +38,18 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
 
     uint256 private _tTotal = 250 * 1e9 * 1e18;
     uint256 private _rTotal = (type(uint256).max - (type(uint256).max % _tTotal));
-    uint256 private _tFeeTotal;
-    uint256 private _tBurnTotal;
-    uint256 private _tLiquidityTotal;
-
-    uint8 private _tFeePercent = 2;
-    uint8 private _tBurnPercent = 2;
-    uint8 private _tLiquidityPercent = 2;
 
     string public constant name = 'ULTI Coin';
     string public constant symbol = 'ULTI';
     uint8 public constant decimals = 18;
+    
+    uint256 public tFeeTotal;
+    uint256 public tBurnTotal;
+    uint256 public tLiquidityTotal;
+
+    uint8 public tFeePercent = 2;
+    uint8 public tBurnPercent = 2;
+    uint8 public tLiquidityPercent = 2;
 
     uint256 public accountLimit;
     uint256 public singleTransferLimit;
@@ -99,14 +100,6 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         return _tTotal;
     }
 
-    function totalFees() external view returns (uint256) {
-        return _tFeeTotal;
-    }
-
-    function totalBurned() external view returns (uint256) {
-        return _tBurnTotal;
-    }
-
     function isExcludedFromReward(address account) public view returns (bool) {
         return _excludedFromReward.contains(account);
     }
@@ -140,7 +133,6 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
     ) external override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
-
         return true;
     }
 
@@ -191,9 +183,9 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         uint8 burnPercent,
         uint8 liquidityPercent
     ) external onlyOwner {
-        _tFeePercent = feePercent;
-        _tBurnPercent = burnPercent;
-        _tLiquidityPercent = liquidityPercent;
+        tFeePercent = feePercent;
+        tBurnPercent = burnPercent;
+        tLiquidityPercent = liquidityPercent;
     }
 
     function setAccountLimit(uint256 amount) external onlyOwner {
@@ -473,7 +465,7 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         if (isExcludedFromReward(address(this))) {
             _tOwned[address(this)] = _tOwned[address(this)] + tLiquidity;
         }
-        _tLiquidityTotal = _tLiquidityTotal + tLiquidity;
+        tLiquidityTotal = tLiquidityTotal + tLiquidity;
     }
 
     function _reflectFeeAndBurn(
@@ -482,8 +474,8 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         uint256 currentRate
     ) private {
         _rTotal = _rTotal - (tFee * currentRate) - (tBurn * currentRate);
-        _tBurnTotal = _tBurnTotal + tBurn;
-        _tFeeTotal = _tFeeTotal + tFee;
+        tBurnTotal = tBurnTotal + tBurn;
+        tFeeTotal = tFeeTotal + tFee;
         _tTotal = _tTotal - tBurn;
     }
 
@@ -540,9 +532,9 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
             return (tAmount, 0, 0, 0);
         }
 
-        uint256 tFee = (tAmount * _tFeePercent) / 100;
-        uint256 tLiquidity = (tAmount * _tLiquidityPercent) / 100;
-        uint256 tBurn = (tAmount * _tBurnPercent) / 100;
+        uint256 tFee = (tAmount * tFeePercent) / 100;
+        uint256 tLiquidity = (tAmount * tLiquidityPercent) / 100;
+        uint256 tBurn = (tAmount * tBurnPercent) / 100;
         uint256 tTransferAmount = tAmount - tFee - tLiquidity - tBurn;
         return (tTransferAmount, tFee, tLiquidity, tBurn);
     }
