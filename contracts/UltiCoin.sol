@@ -308,7 +308,7 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         _checkBotBlacklisting(sender, recipient);
         _checkTransferLimit(sender, recipient, amount);
         _checkAccountLimit(recipient, amount, _balanceOf(recipient));
-        _checkSwapCooldown(sender, recipient, swapPair, address(swapRouter));
+        _checkSwapCooldown(sender, recipient, swapPair);
 
         _liquifyTokens(sender);
 
@@ -351,10 +351,9 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
     function _checkSwapCooldown(
         address sender,
         address recipient,
-        address swapPair,
-        address swapRouter
+        address swapPair
     ) private {
-        if (swapCooldownDuration > 0 && sender == swapPair && recipient != swapRouter) {
+        if (swapCooldownDuration > 0 && sender == swapPair && recipient != address(swapRouter)) {
             require(statuses[recipient].swapCooldown < block.timestamp, 'Swap is cooling down');
             statuses[recipient].swapCooldown = block.timestamp + swapCooldownDuration;
         }
@@ -385,8 +384,6 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
             _transferFromExcluded(sender, recipient, amount, disableFee);
         } else if (!isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
             _transferToExcluded(sender, recipient, amount, disableFee);
-        } else if (!isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
-            _transferStandard(sender, recipient, amount, disableFee);
         } else if (isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
             _transferBothExcluded(sender, recipient, amount, disableFee);
         } else {

@@ -336,8 +336,6 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
             _transferFromExcluded(sender, recipient, amount, disableFee);
         } else if (!isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
             _transferToExcluded(sender, recipient, amount, disableFee);
-        } else if (!isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
-            _transferStandard(sender, recipient, amount, disableFee);
         } else if (isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
             _transferBothExcluded(sender, recipient, amount, disableFee);
         } else {
