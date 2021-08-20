@@ -95,20 +95,24 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
         return _tTotal;
     }
 
-    function isExcludedFromReward(address account) public view returns (bool) {
-        return _excludedFromReward.contains(account);
-    }
-
-    function isExcludedFromFee(address account) external view returns (bool) {
-        return statuses[account].feeExcluded;
-    }
-
-    function isExcludedFromAccountLimit(address account) external view returns (bool) {
-        return statuses[account].accountLimitExcluded;
-    }
-
-    function isExcludedFromTransferLimit(address account) external view returns (bool) {
-        return statuses[account].transferLimitExcluded;
+    function getAccountStatus(address account)
+        external
+        view
+        returns (
+            bool,
+            bool,
+            bool,
+            bool,
+            bool
+        )
+    {
+        return (
+            _isExcludedFromReward(account),
+            statuses[account].feeExcluded,
+            statuses[account].accountLimitExcluded,
+            statuses[account].transferLimitExcluded,
+            statuses[account].blacklistedBot
+        );
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
@@ -133,7 +137,7 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
 
     function reflect(uint256 tAmount) external {
         address account = msg.sender;
-        require(!isExcludedFromReward(account), 'Reflect from excluded address');
+        require(!_isExcludedFromReward(account), 'Reflect from excluded address');
         require(_balanceOf(account) >= tAmount, 'Reflect amount exceeds sender balance');
 
         uint256 currentRate = _getRate();
@@ -237,6 +241,10 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
         }
     }
 
+    function _isExcludedFromReward(address account) private view returns (bool) {
+        return _excludedFromReward.contains(account);
+    }
+
     function _approve(
         address owner,
         address spender,
@@ -250,7 +258,7 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
     }
 
     function _balanceOf(address account) private view returns (uint256) {
-        if (isExcludedFromReward(account)) return _tOwned[account];
+        if (_isExcludedFromReward(account)) return _tOwned[account];
         return _tokenFromReflection(_rOwned[account]);
     }
 
@@ -260,7 +268,7 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
 
         uint256 currentRate = _getRate();
         _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
-        if (isExcludedFromReward(account)) {
+        if (_isExcludedFromReward(account)) {
             _tOwned[account] = _tOwned[account] - tAmount;
         }
         _reflectFeeAndBurn(0, tAmount, currentRate);
@@ -321,11 +329,11 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
     ) private {
         bool disableFee = statuses[sender].feeExcluded || statuses[recipient].feeExcluded;
 
-        if (isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
+        if (_isExcludedFromReward(sender) && !_isExcludedFromReward(recipient)) {
             _transferFromExcluded(sender, recipient, amount, disableFee);
-        } else if (!isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
+        } else if (!_isExcludedFromReward(sender) && _isExcludedFromReward(recipient)) {
             _transferToExcluded(sender, recipient, amount, disableFee);
-        } else if (isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
+        } else if (_isExcludedFromReward(sender) && _isExcludedFromReward(recipient)) {
             _transferBothExcluded(sender, recipient, amount, disableFee);
         } else {
             _transferStandard(sender, recipient, amount, disableFee);
@@ -418,7 +426,7 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
 
     function _takeLiquidity(uint256 tLiquidity, uint256 currentRate) private {
         _rOwned[address(this)] = _rOwned[address(this)] + (tLiquidity * currentRate);
-        if (isExcludedFromReward(address(this))) {
+        if (_isExcludedFromReward(address(this))) {
             _tOwned[address(this)] = _tOwned[address(this)] + tLiquidity;
         }
         tLiquidityTotal = tLiquidityTotal + tLiquidity;
