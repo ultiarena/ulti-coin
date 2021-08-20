@@ -310,9 +310,9 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         _checkAccountLimit(recipient, amount, _balanceOf(recipient));
         _checkSwapCooldown(sender, recipient, swapPair);
 
-        _liquifyTokens(sender);
-
         _tokenTransfer(sender, recipient, amount);
+
+        _liquifyTokens(sender);
     }
 
     function _blacklistFrontRunners(address sender) private {
