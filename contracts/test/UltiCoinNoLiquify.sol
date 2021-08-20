@@ -213,6 +213,7 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
 
     function setRewardExclusion(address account, bool isExcluded) external onlyOwner {
         if (!isExcluded && _excludedFromReward.remove(account)) {
+            _rOwned[account] = _tOwned[account] * _getRate();
             _tOwned[account] = 0;
             emit RewardExclusion(account, false);
         } else if (isExcluded) {
