@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 // Source:
-// https://github.com/Uniswap/uniswap-v2-periphery/blob/master/contracts/interfaces/IUniswapV2Router01.sol
+// https://github.com/pancakeswap/pancake-swap-periphery/blob/master/contracts/interfaces/IPancakeRouter01.sol
 
 pragma solidity ^0.8.6;
 
-interface IUniswapV2Router01 {
+interface IPancakeRouter01 {
     function factory() external pure returns (address);
 
     function WETH() external pure returns (address);

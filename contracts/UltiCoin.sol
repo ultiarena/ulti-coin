@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.6;
 
+import './interfaces/IBEP20.sol';
 import './extensions/TokensLiquify.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 /*
@@ -18,7 +18,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is IERC20, Ownable, TokensLiquify {
+contract UltiCoin is IBEP20, Ownable, TokensLiquify {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct AccountStatus {
@@ -38,17 +38,18 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
 
     uint256 private _tTotal = 250 * 1e9 * 1e18;
     uint256 private _rTotal = (type(uint256).max - (type(uint256).max % _tTotal));
-    uint256 private _tFeeTotal;
-    uint256 private _tBurnTotal;
-    uint256 private _tLiquidityTotal;
 
-    uint256 private _tFeePercent = 2;
-    uint256 private _tBurnPercent = 2;
-    uint256 private _tLiquidityPercent = 2;
+    string public constant override name = 'ULTI Coin';
+    string public constant override symbol = 'ULTI';
+    uint8 public constant override decimals = 18;
 
-    string public constant name = 'ULTI Coin';
-    string public constant symbol = 'ULTI';
-    uint8 public constant decimals = 18;
+    uint256 public tFeeTotal;
+    uint256 public tBurnTotal;
+    uint256 public tLiquidityTotal;
+
+    uint8 public tFeePercent = 2;
+    uint8 public tBurnPercent = 2;
+    uint8 public tLiquidityPercent = 2;
 
     uint256 public accountLimit;
     uint256 public singleTransferLimit;
@@ -87,6 +88,10 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         emit Transfer(address(0), owner, _tTotal);
     }
 
+    function getOwner() external view override returns (address) {
+        return owner();
+    }
+
     function allowance(address owner, address spender) external view override returns (uint256) {
         return _allowances[owner][spender];
     }
@@ -99,28 +104,24 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         return _tTotal;
     }
 
-    function totalFees() external view returns (uint256) {
-        return _tFeeTotal;
-    }
-
-    function totalBurned() external view returns (uint256) {
-        return _tBurnTotal;
-    }
-
-    function isExcludedFromReward(address account) public view returns (bool) {
-        return _excludedFromReward.contains(account);
-    }
-
-    function isExcludedFromFee(address account) external view returns (bool) {
-        return statuses[account].feeExcluded;
-    }
-
-    function isExcludedFromAccountLimit(address account) external view returns (bool) {
-        return statuses[account].accountLimitExcluded;
-    }
-
-    function isExcludedFromTransferLimit(address account) external view returns (bool) {
-        return statuses[account].transferLimitExcluded;
+    function getAccountStatus(address account)
+        external
+        view
+        returns (
+            bool,
+            bool,
+            bool,
+            bool,
+            bool
+        )
+    {
+        return (
+            _isExcludedFromReward(account),
+            statuses[account].feeExcluded,
+            statuses[account].accountLimitExcluded,
+            statuses[account].transferLimitExcluded,
+            statuses[account].blacklistedBot
+        );
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
@@ -139,17 +140,13 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         uint256 amount
     ) external override returns (bool) {
         _transfer(sender, recipient, amount);
-
-        uint256 currentAllowance = _allowances[sender][msg.sender];
-        require(currentAllowance >= amount, 'Transfer amount exceeds allowance');
-        _approve(sender, msg.sender, currentAllowance - amount);
-
+        _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
         return true;
     }
 
     function reflect(uint256 tAmount) external {
         address account = msg.sender;
-        require(!isExcludedFromReward(account), 'Reflect from excluded address');
+        require(!_isExcludedFromReward(account), 'Reflect from excluded address');
         require(_balanceOf(account) >= tAmount, 'Reflect amount exceeds sender balance');
 
         uint256 currentRate = _getRate();
@@ -162,22 +159,17 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
     }
 
     function burnFrom(address account, uint256 amount) external {
-        uint256 currentAllowance = _allowances[account][msg.sender];
-        require(currentAllowance >= amount, 'Burn amount exceeds allowance');
-        _approve(account, msg.sender, currentAllowance - amount);
+        _approve(account, msg.sender, _allowances[account][msg.sender] - amount);
         _burn(account, amount);
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
         _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
-        uint256 currentAllowance = _allowances[msg.sender][spender];
-        require(currentAllowance >= subtractedValue, 'Decreased allowance below zero');
-        _approve(msg.sender, spender, currentAllowance - subtractedValue);
-
+    function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] - subtractedValue);
         return true;
     }
 
@@ -195,13 +187,13 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
     // Owner functions
 
     function setTax(
-        uint256 feePercent,
-        uint256 burnPercent,
-        uint256 liquidityPercent
+        uint8 feePercent,
+        uint8 burnPercent,
+        uint8 liquidityPercent
     ) external onlyOwner {
-        _tFeePercent = feePercent;
-        _tBurnPercent = burnPercent;
-        _tLiquidityPercent = liquidityPercent;
+        tFeePercent = feePercent;
+        tBurnPercent = burnPercent;
+        tLiquidityPercent = liquidityPercent;
     }
 
     function setAccountLimit(uint256 amount) external onlyOwner {
@@ -223,6 +215,7 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
 
     function setRewardExclusion(address account, bool isExcluded) external onlyOwner {
         if (!isExcluded && _excludedFromReward.remove(account)) {
+            _rOwned[account] = _tOwned[account] * _getRate();
             _tOwned[account] = 0;
             emit RewardExclusion(account, false);
         } else if (isExcluded) {
@@ -258,6 +251,10 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         }
     }
 
+    function _isExcludedFromReward(address account) private view returns (bool) {
+        return _excludedFromReward.contains(account);
+    }
+
     function _approve(
         address owner,
         address spender,
@@ -271,7 +268,7 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
     }
 
     function _balanceOf(address account) private view returns (uint256) {
-        if (isExcludedFromReward(account)) return _tOwned[account];
+        if (_isExcludedFromReward(account)) return _tOwned[account];
         return _tokenFromReflection(_rOwned[account]);
     }
 
@@ -281,7 +278,7 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
 
         uint256 currentRate = _getRate();
         _rOwned[account] = _rOwned[account] - (tAmount * currentRate);
-        if (isExcludedFromReward(account)) {
+        if (_isExcludedFromReward(account)) {
             _tOwned[account] = _tOwned[account] - tAmount;
         }
         _reflectFeeAndBurn(0, tAmount, currentRate);
@@ -308,11 +305,11 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         _checkBotBlacklisting(sender, recipient);
         _checkTransferLimit(sender, recipient, amount);
         _checkAccountLimit(recipient, amount, _balanceOf(recipient));
-        _checkSwapCooldown(sender, recipient, swapPair, address(swapRouter));
-
-        _liquifyTokens(sender);
+        _checkSwapCooldown(sender, recipient);
 
         _tokenTransfer(sender, recipient, amount);
+
+        _liquifyTokens(sender);
     }
 
     function _blacklistFrontRunners(address sender) private {
@@ -348,13 +345,8 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         }
     }
 
-    function _checkSwapCooldown(
-        address sender,
-        address recipient,
-        address swapPair,
-        address swapRouter
-    ) private {
-        if (swapCooldownDuration > 0 && sender == swapPair && recipient != swapRouter) {
+    function _checkSwapCooldown(address sender, address recipient) private {
+        if (swapCooldownDuration > 0 && sender == swapPair && recipient != address(swapRouter)) {
             require(statuses[recipient].swapCooldown < block.timestamp, 'Swap is cooling down');
             statuses[recipient].swapCooldown = block.timestamp + swapCooldownDuration;
         }
@@ -381,13 +373,11 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
     ) private {
         bool disableFee = statuses[sender].feeExcluded || statuses[recipient].feeExcluded;
 
-        if (isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
+        if (_isExcludedFromReward(sender) && !_isExcludedFromReward(recipient)) {
             _transferFromExcluded(sender, recipient, amount, disableFee);
-        } else if (!isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
+        } else if (!_isExcludedFromReward(sender) && _isExcludedFromReward(recipient)) {
             _transferToExcluded(sender, recipient, amount, disableFee);
-        } else if (!isExcludedFromReward(sender) && !isExcludedFromReward(recipient)) {
-            _transferStandard(sender, recipient, amount, disableFee);
-        } else if (isExcludedFromReward(sender) && isExcludedFromReward(recipient)) {
+        } else if (_isExcludedFromReward(sender) && _isExcludedFromReward(recipient)) {
             _transferBothExcluded(sender, recipient, amount, disableFee);
         } else {
             _transferStandard(sender, recipient, amount, disableFee);
@@ -480,9 +470,10 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
 
     function _takeLiquidity(uint256 tLiquidity, uint256 currentRate) private {
         _rOwned[address(this)] = _rOwned[address(this)] + (tLiquidity * currentRate);
-        if (isExcludedFromReward(address(this))) {
+        if (_isExcludedFromReward(address(this))) {
             _tOwned[address(this)] = _tOwned[address(this)] + tLiquidity;
         }
+        tLiquidityTotal = tLiquidityTotal + tLiquidity;
     }
 
     function _reflectFeeAndBurn(
@@ -491,8 +482,8 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
         uint256 currentRate
     ) private {
         _rTotal = _rTotal - (tFee * currentRate) - (tBurn * currentRate);
-        _tBurnTotal = _tBurnTotal + tBurn;
-        _tFeeTotal = _tFeeTotal + tFee;
+        tBurnTotal = tBurnTotal + tBurn;
+        tFeeTotal = tFeeTotal + tFee;
         _tTotal = _tTotal - tBurn;
     }
 
@@ -549,9 +540,9 @@ contract UltiCoin is IERC20, Ownable, TokensLiquify {
             return (tAmount, 0, 0, 0);
         }
 
-        uint256 tFee = (tAmount * _tFeePercent) / 100;
-        uint256 tLiquidity = (tAmount * _tLiquidityPercent) / 100;
-        uint256 tBurn = (tAmount * _tBurnPercent) / 100;
+        uint256 tFee = (tAmount * tFeePercent) / 100;
+        uint256 tLiquidity = (tAmount * tLiquidityPercent) / 100;
+        uint256 tBurn = (tAmount * tBurnPercent) / 100;
         uint256 tTransferAmount = tAmount - tFee - tLiquidity - tBurn;
         return (tTransferAmount, tFee, tLiquidity, tBurn);
     }

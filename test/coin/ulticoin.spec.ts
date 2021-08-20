@@ -49,11 +49,11 @@ describe('UltiCoin', () => {
     })
 
     it('should exclude itself from the fee', async function () {
-      expect(await this.token.isExcludedFromFee(this.token.address)).to.be.true
+      expect((await this.token.getAccountStatus(this.token.address))[1]).to.be.true
     })
 
     it('should exclude owner from the fee', async function () {
-      expect(await this.token.isExcludedFromFee(await this.token.owner())).to.be.true
+      expect((await this.token.getAccountStatus(await this.token.owner()))[1]).to.be.true
     })
 
     context('burning tokens', async function () {
