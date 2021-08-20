@@ -305,7 +305,7 @@ contract UltiCoin is IBEP20, Ownable, TokensLiquify {
         _checkBotBlacklisting(sender, recipient);
         _checkTransferLimit(sender, recipient, amount);
         _checkAccountLimit(recipient, amount, _balanceOf(recipient));
-        _checkSwapCooldown(sender, recipient, swapPair);
+        _checkSwapCooldown(sender, recipient);
 
         _tokenTransfer(sender, recipient, amount);
 
@@ -345,11 +345,7 @@ contract UltiCoin is IBEP20, Ownable, TokensLiquify {
         }
     }
 
-    function _checkSwapCooldown(
-        address sender,
-        address recipient,
-        address swapPair
-    ) private {
+    function _checkSwapCooldown(address sender, address recipient) private {
         if (swapCooldownDuration > 0 && sender == swapPair && recipient != address(swapRouter)) {
             require(statuses[recipient].swapCooldown < block.timestamp, 'Swap is cooling down');
             statuses[recipient].swapCooldown = block.timestamp + swapCooldownDuration;
