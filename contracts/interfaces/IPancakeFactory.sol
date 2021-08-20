@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 // Source:
-// https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/interfaces/IUniswapV2Factory.sol
+// https://github.com/pancakeswap/pancake-swap-core/blob/master/contracts/interfaces/IPancakeFactory.sol
 
 pragma solidity ^0.8.6;
 
-interface IUniswapV2Factory {
+interface IPancakeFactory {
     event PairCreated(address indexed token0, address indexed token1, address pair, uint256);
 
     function feeTo() external view returns (address);

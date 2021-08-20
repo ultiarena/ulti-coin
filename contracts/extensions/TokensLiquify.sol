@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.6;
 
-import '../interfaces/IUniswapV2Factory.sol';
-import '../interfaces/IUniswapV2Router02.sol';
+import '../interfaces/IPancakeFactory.sol';
+import '../interfaces/IPancakeRouter02.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 contract TokensLiquify is Ownable {
     bool private isInSwapAndLiquify;
 
-    IUniswapV2Router02 public swapRouter;
+    IPancakeRouter02 public swapRouter;
     address public swapPair;
 
     bool public isLiquifyingEnabled;
@@ -41,8 +41,8 @@ contract TokensLiquify is Ownable {
     }
 
     function _setRouterAddress(address routerAddress_) internal {
-        IUniswapV2Router02 _swapRouter = IUniswapV2Router02(routerAddress_);
-        swapPair = IUniswapV2Factory(_swapRouter.factory()).createPair(address(this), _swapRouter.WETH());
+        IPancakeRouter02 _swapRouter = IPancakeRouter02(routerAddress_);
+        swapPair = IPancakeFactory(_swapRouter.factory()).createPair(address(this), _swapRouter.WETH());
         swapRouter = _swapRouter;
     }
 
