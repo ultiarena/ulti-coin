@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.6;
 
+import '../interfaces/IBEP20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 /*
@@ -17,7 +17,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoinNoLiquify is IERC20, Context, Ownable {
+contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct AccountStatus {
@@ -38,10 +38,10 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
     uint256 private _tTotal = 250 * 1e9 * 1e18;
     uint256 private _rTotal = (type(uint256).max - (type(uint256).max % _tTotal));
 
-    string public constant name = 'ULTI Coin';
-    string public constant symbol = 'ULTI';
-    uint8 public constant decimals = 18;
-    
+    string public constant override name = 'ULTI Coin';
+    string public constant override symbol = 'ULTI';
+    uint8 public constant override decimals = 18;
+
     uint256 public tFeeTotal;
     uint256 public tBurnTotal;
     uint256 public tLiquidityTotal;
@@ -77,6 +77,10 @@ contract UltiCoinNoLiquify is IERC20, Context, Ownable {
         // Assign initial supply to the owner
         _rOwned[owner] = _rTotal;
         emit Transfer(address(0), owner, _tTotal);
+    }
+
+    function getOwner() external view override returns (address) {
+        return owner();
     }
 
     function allowance(address owner, address spender) external view override returns (uint256) {
