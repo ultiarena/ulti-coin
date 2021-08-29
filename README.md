@@ -1,13 +1,16 @@
 # ULTI Coin contracts
 
-
-
 [![Lint](https://github.com/ultiarena/ulti-contracts/actions/workflows/lint.yml/badge.svg)](https://github.com/ultiarena/ulti-contracts/actions/workflows/lint.yml)
 [![Tests](https://github.com/ultiarena/ulti-contracts/actions/workflows/tests.yml/badge.svg)](https://github.com/ultiarena/ulti-contracts/actions/workflows/tests.yml)
 
-## Contracts Audits
+## Deployments
 
-- [UltiCoin by solidity.finance](https://solidity.finance/audits/Ulticoin/)
+- [Mainnet](https://bscscan.com/token/0x42BFE4A3E023f2C90aEBFfbd9B667599Fa38514F)
+- [Testnet](https://testnet.bscscan.com/token/0x1Ed837F59efA2b69c7e91a7D1bFa06FC9C20ea09)
+
+## Audits
+
+- [CertiK ](https://www.certik.org/projects/ultiarena)
 
 ## Usage
 
