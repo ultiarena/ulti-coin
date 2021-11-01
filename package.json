@@ -10,13 +10,12 @@
     "clean": "hardhat clean",
     "coverage": "hardhat coverage",
     "test": "hardhat test",
-    "deploy-testnet": "hardhat run --network bsc_testnet",
+    "deploy-bsc_testnet": "hardhat run --network bsc_testnet",
+    "deploy-polygon_testnet": "hardhat run --network polygon_testnet",
     "deploy-kovan": "hardhat run --network kovan",
     "deploy-mainnet": "hardhat run --network bsc",
     "bytecode": "hardhat run --network bsc_testnet",
-    "verify-kovan": "hardhat verify --network kovan",
-    "verify-testnet": "hardhat verify --network bsc_testnet",
-    "verify-mainnet": "hardhat verify --network bsc",
+    "verify": "hardhat verify",
     "format": "prettier --write \"**/*.ts\" \"contracts/**/*.sol\"",
     "lint": "solhint \"contracts/**/*.sol\"",
     "typecheck": "yarn compile && yarn test && yarn tsc --noEmit"
@@ -25,32 +24,32 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.1.0"
+    "@openzeppelin/contracts": "^4.3.3"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@typechain/ethers-v5": "^7.0.0",
+    "@typechain/ethers-v5": "^8.0.2",
     "@typechain/hardhat": "^2.0.1",
     "@types/chai": "^4.2.18",
-    "@types/mocha": "^8.2.2",
-    "@types/node": "^15.6.0",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^16.11.7",
     "chai": "^4.3.4",
     "decimal.js": "^10.2.1",
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.2.0",
-    "hardhat": "^2.3.0",
+    "hardhat": "^2.6.8",
     "hardhat-typechain": "^0.3.5",
-    "mocha": "^8.4.0",
+    "mocha": "^9.1.3",
     "prettier": "^2.3.0",
-    "prettier-plugin-solidity": "^1.0.0-beta.10",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solhint": "^3.3.5",
     "solhint-plugin-prettier": "^0.0.5",
     "solidity-coverage": "^0.7.16",
     "ts-generator": "^0.1.1",
-    "ts-node": "^9.1.1",
-    "typechain": "^5.0.0",
-    "typescript": "4.1.5"
+    "ts-node": "^10.4.0",
+    "typechain": "^6.0.2",
+    "typescript": "^4.4.4"
   }
 }
