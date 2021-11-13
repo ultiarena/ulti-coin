@@ -30,7 +30,6 @@ contract UltiCoin is AccessControl, ERC20Burnable {
     uint256 public cap;
     uint256 public accountLimit;
     uint256 public transferLimit;
-    uint256 public launchTime;
 
     event AccountLimitExclusion(address indexed account, bool isExcluded);
     event TransferLimitExclusion(address indexed account, bool isExcluded);
@@ -60,7 +59,7 @@ contract UltiCoin is AccessControl, ERC20Burnable {
         transferLimit = transferLimit_;
     }
 
-    function mint(address to, uint256 amount) public virtual onlyRole(MINTER_ROLE) {
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         _mint(to, amount);
     }
 
@@ -112,19 +111,19 @@ contract UltiCoin is AccessControl, ERC20Burnable {
         token.transfer(to, amount);
     }
 
+    function _mint(address account, uint256 amount) internal override {
+        require(totalSupply() + amount <= cap, 'Cap exceeded');
+        super._mint(account, amount);
+    }
+
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
-    ) internal virtual override {
+    ) internal view override {
         _checkBlacklisting(from, to);
         _checkTransferLimit(from, to, amount);
         _checkAccountLimit(to, amount);
-    }
-
-    function _mint(address account, uint256 amount) internal virtual override {
-        require(totalSupply() + amount <= cap, 'Cap exceeded');
-        super._mint(account, amount);
     }
 
     function _checkBlacklisting(address from, address to) private view {

@@ -14,6 +14,8 @@ async function deployUltiCoin(admin: string, cap: BigNumber, accountLimit: BigNu
   console.log('\nContract BscUltiCoin will be deployed to network %s with parameters:', hre.network.name)
   console.log(' admin: %s', admin)
   console.log(' cap: %s', cap)
+  console.log(' accountLimit: %s', accountLimit)
+  console.log(' transferLimit: %s', transferLimit)
 
   if (await confirm('\nDo you want to continue [y/N]? ')) {
     console.log('Deploying contract...')
@@ -35,16 +37,18 @@ async function deployUltiCoin(admin: string, cap: BigNumber, accountLimit: BigNu
 
 async function main() {
   // testnet
-  // const admin = '0x0a98ffD63a3535F5e799e5c1DDE49Ec7A65b5fA3'
-  // const cap = parseUnits('204000000', 18)
-
-  // mainnet
-  const admin = '0x8595c4Ad15D51c5Bf920c249869Ec5b3250c2D4d'
-  const cap = parseUnits('204000000000', 18)
+  const admin = '0x0a98ffD63a3535F5e799e5c1DDE49Ec7A65b5fA3'
+  const cap = parseUnits('204000000', 18)
   const accountLimit = parseUnits('150000000', 18)
   const transferLimit = parseUnits('5000000', 18)
 
-  deployUltiCoin(admin, cap, accountLimit, transferLimit)
+  // mainnet
+  // const admin = '0x8595c4Ad15D51c5Bf920c249869Ec5b3250c2D4d'
+  // const cap = parseUnits('204000000000', 18)
+  // const accountLimit = parseUnits('150000000', 18)
+  // const transferLimit = parseUnits('5000000', 18)
+
+  await deployUltiCoin(admin, cap, accountLimit, transferLimit)
 }
 
 main()

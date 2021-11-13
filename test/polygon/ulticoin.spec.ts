@@ -116,6 +116,17 @@ describe('UltiCoin', () => {
           'Recipient has reached account limit'
         )
       })
+
+      it('reverts when account blacklisted', async function () {
+        await this.token.connect(admin).setBlacklisting([recipient.address], true);
+        await expect(this.token.connect(sender).transfer(recipient.address, transferAmount)).to.be.revertedWith(
+          'Recipient is blacklisted'
+        )
+        await this.token.connect(admin).setBlacklisting([sender.address], true);
+        await expect(this.token.connect(sender).transfer(recipient.address, transferAmount)).to.be.revertedWith(
+          'Sender is blacklisted'
+        )
+      })
     })
     /*
   

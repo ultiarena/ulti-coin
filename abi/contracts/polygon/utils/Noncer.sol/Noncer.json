@@ -1,0 +1,9 @@
+[
+  {
+    "inputs": [],
+    "name": "setNonce",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
