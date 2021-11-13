@@ -17,7 +17,7 @@ import '@openzeppelin/contracts//access/AccessControl.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoinBsc is AccessControl, ERC20Burnable, ERC20Pausable {
+contract UltiCoin is AccessControl, ERC20Burnable, ERC20Pausable {
     struct AccountStatus {
         bool accountLimitExcluded;
         bool transferLimitExcluded;
