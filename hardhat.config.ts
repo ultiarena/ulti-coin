@@ -15,15 +15,15 @@ const config: HardhatUserConfig = {
     alphaSort: true,
     disambiguatePaths: false,
     runOnCompile: false,
-    strict: true
+    strict: true,
   },
   etherscan: {
-    apiKey: etherscanApiKey
+    apiKey: etherscanApiKey,
   },
   gasReporter: {
     coinmarketcap: process.env.CMC_API_KEY,
     enabled: !!process.env.REPORT_GAS,
-    showTimeSpent: true
+    showTimeSpent: true,
   },
   networks: {
     kovan: {
@@ -63,7 +63,7 @@ const config: HardhatUserConfig = {
     ],
     settings: {
       optimizer: {
-        enabled: true
+        enabled: true,
       },
       metadata: {
         // do not include the metadata hash, since this is machine dependent

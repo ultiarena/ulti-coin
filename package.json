@@ -6,19 +6,15 @@
   "main": "index.js",
   "license": "GPLv3",
   "scripts": {
-    "compile": "hardhat compile",
     "clean": "hardhat clean",
+    "compile": "hardhat compile",
     "coverage": "hardhat coverage",
-    "test": "hardhat test",
-    "deploy-bsc_testnet": "hardhat run --network bsc_testnet",
-    "deploy-polygon_testnet": "hardhat run --network polygon_testnet",
-    "deploy-kovan": "hardhat run --network kovan",
-    "deploy-mainnet": "hardhat run --network bsc",
-    "bytecode": "hardhat run --network bsc_testnet",
-    "verify": "hardhat verify",
     "format": "prettier --write \"**/*.ts\" \"contracts/**/*.sol\"",
     "lint": "solhint \"contracts/**/*.sol\"",
-    "typecheck": "yarn compile && yarn test && yarn tsc --noEmit"
+    "size-contracts": "hardhat size-contracts",
+    "test": "hardhat test",
+    "typecheck": "yarn compile && yarn test && yarn tsc --noEmit",
+    "verify": "hardhat verify"
   },
   "engines": {
     "node": ">=10"
