@@ -18,7 +18,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is IBEP20, Ownable, TokensLiquify {
+contract BscUltiCoin is IBEP20, Ownable, TokensLiquify {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct AccountStatus {
@@ -391,8 +391,13 @@ contract UltiCoin is IBEP20, Ownable, TokensLiquify {
         bool disableFee
     ) private {
         uint256 currentRate = _getRate();
-        (uint256 rTransferAmount, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tBurn) =
-            _getValues(tAmount, currentRate, disableFee);
+        (
+            uint256 rTransferAmount,
+            uint256 tTransferAmount,
+            uint256 tFee,
+            uint256 tLiquidity,
+            uint256 tBurn
+        ) = _getValues(tAmount, currentRate, disableFee);
         _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
         _takeLiquidity(tLiquidity, currentRate);
@@ -407,8 +412,13 @@ contract UltiCoin is IBEP20, Ownable, TokensLiquify {
         bool disableFee
     ) private {
         uint256 currentRate = _getRate();
-        (uint256 rTransferAmount, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tBurn) =
-            _getValues(tAmount, currentRate, disableFee);
+        (
+            uint256 rTransferAmount,
+            uint256 tTransferAmount,
+            uint256 tFee,
+            uint256 tLiquidity,
+            uint256 tBurn
+        ) = _getValues(tAmount, currentRate, disableFee);
         _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
         _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
@@ -424,8 +434,13 @@ contract UltiCoin is IBEP20, Ownable, TokensLiquify {
         bool disableFee
     ) private {
         uint256 currentRate = _getRate();
-        (uint256 rTransferAmount, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tBurn) =
-            _getValues(tAmount, currentRate, disableFee);
+        (
+            uint256 rTransferAmount,
+            uint256 tTransferAmount,
+            uint256 tFee,
+            uint256 tLiquidity,
+            uint256 tBurn
+        ) = _getValues(tAmount, currentRate, disableFee);
         _tOwned[sender] = _tOwned[sender] - tAmount;
         _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
         _rOwned[recipient] = _rOwned[recipient] + rTransferAmount;
@@ -441,8 +456,13 @@ contract UltiCoin is IBEP20, Ownable, TokensLiquify {
         bool disableFee
     ) private {
         uint256 currentRate = _getRate();
-        (uint256 rTransferAmount, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity, uint256 tBurn) =
-            _getValues(tAmount, currentRate, disableFee);
+        (
+            uint256 rTransferAmount,
+            uint256 tTransferAmount,
+            uint256 tFee,
+            uint256 tLiquidity,
+            uint256 tBurn
+        ) = _getValues(tAmount, currentRate, disableFee);
         _tOwned[sender] = _tOwned[sender] - tAmount;
         _rOwned[sender] = _rOwned[sender] - (tAmount * currentRate);
         _tOwned[recipient] = _tOwned[recipient] + tTransferAmount;
