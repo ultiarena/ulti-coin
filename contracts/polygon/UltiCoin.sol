@@ -3,7 +3,6 @@
 pragma solidity ^0.8.10;
 
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol';
-import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol';
 import '@openzeppelin/contracts//access/AccessControl.sol';
 
 /*
@@ -17,7 +16,7 @@ import '@openzeppelin/contracts//access/AccessControl.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoin is AccessControl, ERC20Burnable, ERC20Pausable {
+contract UltiCoin is AccessControl, ERC20Burnable {
     struct AccountStatus {
         bool accountLimitExcluded;
         bool transferLimitExcluded;
@@ -25,49 +24,44 @@ contract UltiCoin is AccessControl, ERC20Burnable, ERC20Pausable {
     }
 
     bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
-    bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
+    mapping(address => AccountStatus) public statuses;
+
+    uint256 public cap;
     uint256 public accountLimit;
     uint256 public transferLimit;
     uint256 public launchTime;
 
-    mapping(address => AccountStatus) public statuses;
-    uint256 public cap;
-
     event AccountLimitExclusion(address indexed account, bool isExcluded);
     event TransferLimitExclusion(address indexed account, bool isExcluded);
 
-    constructor(address admin, uint256 cap_) ERC20('ULTI Coin', 'ULTI') {
+    constructor(
+        address admin,
+        uint256 cap_,
+        uint256 accountLimit_,
+        uint256 transferLimit_
+    ) ERC20('ULTI Coin', 'ULTI') {
         require(admin != address(0), 'Admin is zero address');
         require(cap_ > 0, 'Cap is 0');
+        require(accountLimit_ > 0, 'Account limit is 0');
+        require(transferLimit_ > 0, 'Transfer limit is 0');
 
         // Grant all roles to given address
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
         _setupRole(MINTER_ROLE, admin);
-        _setupRole(PAUSER_ROLE, admin);
 
-        // Exclude the admin and this contract from restrictions
+        // Exclude the admin and zero address from restrictions
         statuses[admin] = AccountStatus(true, true, false);
-        statuses[address(this)] = AccountStatus(true, true, false);
+        statuses[address(0)] = AccountStatus(true, true, false);
 
         // Set initial settings
-        accountLimit = 150 * 10e6 * (10**18);
-        transferLimit = 5 * 10e6 * (10**18);
-
-        // Set cap
         cap = cap_;
+        accountLimit = accountLimit_;
+        transferLimit = transferLimit_;
     }
 
     function mint(address to, uint256 amount) public virtual onlyRole(MINTER_ROLE) {
         _mint(to, amount);
-    }
-
-    function pause() public virtual onlyRole(PAUSER_ROLE) {
-        _pause();
-    }
-
-    function unpause() public virtual onlyRole(PAUSER_ROLE) {
-        _unpause();
     }
 
     function setAccountLimit(uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -78,8 +72,9 @@ contract UltiCoin is AccessControl, ERC20Burnable, ERC20Pausable {
         transferLimit = amount;
     }
 
-    function launch() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        launchTime = block.timestamp;
+    function setCap(uint256 cap_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(cap_ >= totalSupply(), 'Cap is too low');
+        cap = cap_;
     }
 
     function setAccountLimitExclusion(address[] calldata accounts, bool isExcluded)
@@ -108,20 +103,20 @@ contract UltiCoin is AccessControl, ERC20Burnable, ERC20Pausable {
         }
     }
 
-    function setLowerCap(uint256 cap_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(cap_ <= cap, 'Cap is too high');
-        require(cap_ >= totalSupply(), 'Cap is too low');
-        cap = cap_;
+    function withdrawERC20(
+        IERC20 token,
+        address to,
+        uint256 amount
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(amount <= token.balanceOf(address(this)), 'Requested amount exceeds balance');
+        token.transfer(to, amount);
     }
 
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
-    ) internal virtual override(ERC20, ERC20Pausable) {
-        super._beforeTokenTransfer(from, to, amount);
-
-        _blacklistFrontRunners(from);
+    ) internal virtual override {
         _checkBlacklisting(from, to);
         _checkTransferLimit(from, to, amount);
         _checkAccountLimit(to, amount);
@@ -130,18 +125,6 @@ contract UltiCoin is AccessControl, ERC20Burnable, ERC20Pausable {
     function _mint(address account, uint256 amount) internal virtual override {
         require(totalSupply() + amount <= cap, 'Cap exceeded');
         super._mint(account, amount);
-    }
-
-    function _burn(address account, uint256 amount) internal virtual override(ERC20) {
-        super._burn(account, amount);
-    }
-
-    function _blacklistFrontRunners(address from) private {
-        if (launchTime == 0 || block.timestamp < launchTime + 5 seconds) {
-            if (!statuses[from].transferLimitExcluded) {
-                statuses[from].blacklisted = true;
-            }
-        }
     }
 
     function _checkBlacklisting(address from, address to) private view {
