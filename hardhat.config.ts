@@ -21,12 +21,29 @@ module.exports = {
       chainId: 56,
       accounts: { mnemonic: mnemonic },
     },
+    polygon_testnet: {
+      url: `https://rpc-mumbai.maticvigil.com`,
+      chainId: 80001,
+      accounts: { mnemonic: mnemonic },
+    },
+    polygon: {
+      url: 'https://rpc-mainnet.maticvigil.com',
+      chainId: 137,
+      accounts: { mnemonic: mnemonic },
+    },
   },
   etherscan: {
     apiKey: etherscanApiKey,
   },
   solidity: {
-    version: '0.8.6',
+    compilers: [
+      {
+        version: '0.8.6',
+      },
+      {
+        version: '0.8.10',
+      },
+    ],
     settings: {
       //  optimizer: {
       //    enabled: false,
