@@ -1,9 +1,6 @@
 import { ethers } from 'hardhat'
 
-async function deploy(
-  owner: string,
-  pancakeRouterAddress: string
-) {
+async function deploy(owner: string, pancakeRouterAddress: string) {
   const tokenFactory = await ethers.getContractFactory('UltiCoin')
   const token = await tokenFactory.deploy(owner, pancakeRouterAddress, {
     gasLimit: 10000000,
@@ -11,7 +8,6 @@ async function deploy(
   await token.deployed()
   return token.address
 }
-
 
 async function main() {
   // mainnet BSC Router Address: 0x10ED43C718714eb63d5aA57B78B54704E256024E
