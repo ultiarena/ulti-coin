@@ -35,8 +35,7 @@ async function main() {
 
   const owner = '0x8595c4Ad15D51c5Bf920c249869Ec5b3250c2D4d'
   const pancakeRouterAddress = '0x10ED43C718714eb63d5aA57B78B54704E256024E'
-  const tokenAddress = await deployBscUltiCoin(owner, pancakeRouterAddress)
-  console.log('UltiCoin deployed to:', tokenAddress)
+  await deployBscUltiCoin(owner, pancakeRouterAddress)
 }
 
 main()

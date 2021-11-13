@@ -13,6 +13,10 @@ export function toEther(num: BigNumberish): BigNumberish {
   return BigNumber.from(num).div(BigNumber.from(10).pow(BigNumber.from(18)))
 }
 
+export function missing_role(account: string, role: string): string {
+  return 'AccessControl: account ' + account.toLowerCase() + ' is missing role ' + role.toLowerCase()
+}
+
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 /* UltiCoin consts */

@@ -8,7 +8,7 @@ import { parseUnits } from 'ethers/lib/utils'
 
 const hre: HardhatRuntimeEnvironment = require('hardhat')
 
-async function deployUltiCoin(admin: string, cap: BigNumber) {
+async function deployUltiCoin(admin: string, cap: BigNumber, accountLimit: BigNumber, transferLimit: BigNumber) {
   const [deployer]: SignerWithAddress[] = await ethers.getSigners()
 
   console.log('\nContract BscUltiCoin will be deployed to network %s with parameters:', hre.network.name)
@@ -18,7 +18,15 @@ async function deployUltiCoin(admin: string, cap: BigNumber) {
   if (await confirm('\nDo you want to continue [y/N]? ')) {
     console.log('Deploying contract...')
 
-    const ultiCoin: UltiCoin = await deploy('UltiCoin', deployer, [admin, cap])
+    const ultiCoin: UltiCoin = await deploy('UltiCoin', deployer, [
+      admin,
+      cap,
+      accountLimit,
+      transferLimit,
+      {
+        gasLimit: 5000000,
+      },
+    ])
     console.log('UltiCoin deployed to:', ultiCoin.address)
   } else {
     console.log('Abort')
@@ -33,9 +41,10 @@ async function main() {
   // mainnet
   const admin = '0x8595c4Ad15D51c5Bf920c249869Ec5b3250c2D4d'
   const cap = parseUnits('204000000000', 18)
+  const accountLimit = parseUnits('150000000', 18)
+  const transferLimit = parseUnits('5000000', 18)
 
-  const tokenAddress = await deployUltiCoin(admin, cap)
-  console.log('UltiCoin deployed to:', tokenAddress)
+  deployUltiCoin(admin, cap, accountLimit, transferLimit)
 }
 
 main()
