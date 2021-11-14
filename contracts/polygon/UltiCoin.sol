@@ -31,6 +31,8 @@ contract UltiCoin is AccessControl, ERC20Burnable {
     uint256 public accountLimit;
     uint256 public transferLimit;
 
+    bool public mintingDisabled;
+
     event AccountLimitExclusion(address indexed account, bool isExcluded);
     event TransferLimitExclusion(address indexed account, bool isExcluded);
 
@@ -60,6 +62,7 @@ contract UltiCoin is AccessControl, ERC20Burnable {
     }
 
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
+        require(!mintingDisabled, 'Minting is disabled');
         _mint(to, amount);
     }
 
@@ -100,6 +103,11 @@ contract UltiCoin is AccessControl, ERC20Burnable {
         for (uint256 i = 0; i < accounts.length; i++) {
             statuses[accounts[i]].blacklisted = isBlacklisted;
         }
+    }
+
+    function disableMinting() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(!mintingDisabled, 'Minting already disabled');
+        mintingDisabled = true;
     }
 
     function withdrawERC20(

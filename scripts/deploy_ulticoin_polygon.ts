@@ -32,17 +32,11 @@ async function deployUltiCoin(admin: string, cap: BigNumber, accountLimit: BigNu
     console.log('UltiCoin deployed to:', ultiCoin.address)
 
     if (await confirm('\nDo you want to verify contract [y/N]? ')) {
-      await hre.run("verify:verify", {
+      await hre.run('verify:verify', {
         address: ultiCoin.address,
-        constructorArguments: [
-          admin,
-          cap,
-          accountLimit,
-          transferLimit,
-        ],
-      });
+        constructorArguments: [admin, cap, accountLimit, transferLimit],
+      })
     }
-    
   } else {
     console.log('Abort')
   }

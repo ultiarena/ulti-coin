@@ -57,6 +57,10 @@ describe('UltiCoin', () => {
       expect(await this.token.transferLimit()).to.equal(transferLimit)
     })
 
+    it(`has enabled minting`, async function () {
+      expect(await this.token.mintingDisabled()).to.be.false
+    })
+
     it(`has set admin as default admin`, async function () {
       expect(await this.token.hasRole(await this.token.DEFAULT_ADMIN_ROLE(), admin.address)).to.be.true
     })
@@ -85,6 +89,13 @@ describe('UltiCoin', () => {
       it('reverts when called by non-minter amount exceeding cap', async function () {
         await expect(this.token.connect(deployer).mint(recipient.address, mintAmount)).to.be.revertedWith(
           missing_role(deployer.address, MINTER_ROLE)
+        )
+      })
+
+      it('reverts when minting is disabled', async function () {
+        await this.token.connect(admin).disableMinting()
+        await expect(this.token.connect(admin).mint(recipient.address, mintAmount)).to.be.revertedWith(
+          'Minting is disabled'
         )
       })
     })
@@ -118,11 +129,11 @@ describe('UltiCoin', () => {
       })
 
       it('reverts when account blacklisted', async function () {
-        await this.token.connect(admin).setBlacklisting([recipient.address], true);
+        await this.token.connect(admin).setBlacklisting([recipient.address], true)
         await expect(this.token.connect(sender).transfer(recipient.address, transferAmount)).to.be.revertedWith(
           'Recipient is blacklisted'
         )
-        await this.token.connect(admin).setBlacklisting([sender.address], true);
+        await this.token.connect(admin).setBlacklisting([sender.address], true)
         await expect(this.token.connect(sender).transfer(recipient.address, transferAmount)).to.be.revertedWith(
           'Sender is blacklisted'
         )
