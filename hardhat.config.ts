@@ -10,6 +10,8 @@ import 'solidity-coverage'
 import { HardhatUserConfig } from 'hardhat/config'
 const { privateKey, etherscanApiKey, infuraApiKey } = require('./.secrets.json')
 
+const accounts = !privateKey ? [] : [privateKey];
+
 const config: HardhatUserConfig = {
   contractSizer: {
     alphaSort: true,
@@ -29,27 +31,27 @@ const config: HardhatUserConfig = {
     kovan: {
       url: `https://kovan.infura.io/v3/${infuraApiKey}`,
       chainId: 42,
-      accounts: [privateKey],
+      accounts,
     },
     bsc_testnet: {
       url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
       chainId: 97,
-      accounts: [privateKey],
+      accounts,
     },
     bsc: {
       url: 'https://bsc-dataseed.binance.org/',
       chainId: 56,
-      accounts: [privateKey],
+      accounts,
     },
     polygon_testnet: {
       url: `https://rpc-mumbai.maticvigil.com`,
       chainId: 80001,
-      accounts: [privateKey],
+      accounts,
     },
     polygon: {
       url: 'https://rpc-mainnet.maticvigil.com',
       chainId: 137,
-      accounts: [privateKey],
+      accounts,
     },
   },
   solidity: {
