@@ -1,5 +1,5 @@
 import { Decimal } from 'decimal.js'
-import { BigNumber, BigNumberish, utils } from 'ethers'
+import { BigNumber, BigNumberish } from 'ethers'
 
 export function formatTokenAmount(num: BigNumberish): string {
   return new Decimal(num.toString()).dividedBy(new Decimal(10).pow(18)).toPrecision(5)
@@ -11,6 +11,10 @@ export function toWei(num: BigNumberish): BigNumberish {
 
 export function toEther(num: BigNumberish): BigNumberish {
   return BigNumber.from(num).div(BigNumber.from(10).pow(BigNumber.from(18)))
+}
+
+export function missing_role(account: string, role: string): string {
+  return 'AccessControl: account ' + account.toLowerCase() + ' is missing role ' + role.toLowerCase()
 }
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'

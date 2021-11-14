@@ -79,15 +79,14 @@ contract TokensLiquify is Ownable {
         uint256 bnbAmount,
         address lpReceiver
     ) private {
-        (uint256 amountToken, uint256 amountBNB, uint256 liquidity) =
-            swapRouter.addLiquidityETH{value: bnbAmount}(
-                address(this),
-                tokenAmount,
-                0, // slippage is unavoidable
-                0, // slippage is unavoidable
-                lpReceiver,
-                block.timestamp
-            );
+        (uint256 amountToken, uint256 amountBNB, uint256 liquidity) = swapRouter.addLiquidityETH{value: bnbAmount}(
+            address(this),
+            tokenAmount,
+            0, // slippage is unavoidable
+            0, // slippage is unavoidable
+            lpReceiver,
+            block.timestamp
+        );
         emit TokensLiquified(amountToken, amountBNB, liquidity);
     }
 }
