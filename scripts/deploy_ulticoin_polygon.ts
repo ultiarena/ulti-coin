@@ -30,6 +30,19 @@ async function deployUltiCoin(admin: string, cap: BigNumber, accountLimit: BigNu
       },
     ])
     console.log('UltiCoin deployed to:', ultiCoin.address)
+
+    if (await confirm('\nDo you want to verify contract [y/N]? ')) {
+      await hre.run("verify:verify", {
+        address: ultiCoin.address,
+        constructorArguments: [
+          admin,
+          cap,
+          accountLimit,
+          transferLimit,
+        ],
+      });
+    }
+    
   } else {
     console.log('Abort')
   }
@@ -38,7 +51,7 @@ async function deployUltiCoin(admin: string, cap: BigNumber, accountLimit: BigNu
 async function main() {
   // testnet
   const admin = '0x0a98ffD63a3535F5e799e5c1DDE49Ec7A65b5fA3'
-  const cap = parseUnits('204000000', 18)
+  const cap = parseUnits('204000000000', 18)
   const accountLimit = parseUnits('150000000', 18)
   const transferLimit = parseUnits('5000000', 18)
 
