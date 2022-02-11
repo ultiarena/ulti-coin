@@ -14,7 +14,8 @@
     "size-contracts": "hardhat size-contracts",
     "test": "hardhat test",
     "typecheck": "yarn compile && yarn test && yarn tsc --noEmit",
-    "verify-polygon_testnet": "hardhat verify --network polygon_testnet"
+    "verify-polygon_testnet": "hardhat verify --network polygon_testnet",
+    "verify-polygon": "hardhat verify --network polygon"
   },
   "engines": {
     "node": ">=10"

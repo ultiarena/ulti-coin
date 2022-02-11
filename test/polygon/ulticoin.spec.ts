@@ -1,6 +1,6 @@
 import { expect, use } from 'chai'
 import { ethers } from 'hardhat'
-import { UltiCoin__factory, UltiCoin } from '../../typechain'
+import { UltiCoin__factory, UltiCoin__Polygon} from '../../typechain'
 import { solidity } from 'ethereum-waffle'
 import { DECIMALS, missing_role, NAME, SYMBOL } from '../common'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'

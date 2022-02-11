@@ -8,11 +8,19 @@ import 'hardhat-gas-reporter'
 import 'hardhat-tracer'
 import 'solidity-coverage'
 import { HardhatUserConfig } from 'hardhat/config'
-const { privateKey, etherscanApiKey, infuraApiKey } = require('./.secrets.json')
+const { privateKey, etherscanApiKey } = require('./.secrets.json')
 
-const accounts = !privateKey ? [] : [privateKey];
+const accounts = !privateKey ? [] : [privateKey]
 
 const config: HardhatUserConfig = {
+  abiExporter: {
+    path: './abi',
+    clear: true,
+    flat: false,
+    except: ['@openzeppelin'],
+    spacing: 2,
+    pretty: true,
+  },
   contractSizer: {
     alphaSort: true,
     disambiguatePaths: false,
@@ -28,17 +36,12 @@ const config: HardhatUserConfig = {
     showTimeSpent: true,
   },
   networks: {
-    kovan: {
-      url: `https://kovan.infura.io/v3/${infuraApiKey}`,
-      chainId: 42,
-      accounts,
-    },
     bsc_testnet: {
       url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
       chainId: 97,
       accounts,
     },
-    bsc: {
+    bsc_mainnet: {
       url: 'https://bsc-dataseed.binance.org/',
       chainId: 56,
       accounts,
@@ -48,8 +51,9 @@ const config: HardhatUserConfig = {
       chainId: 80001,
       accounts,
     },
-    polygon: {
-      url: 'https://rpc-mainnet.maticvigil.com',
+    polygon_mainnet: {
+      // url: 'https://rpc-mainnet.maticvigil.com',
+      url: 'https://polygon-mumbai.g.alchemy.com/v2',
       chainId: 137,
       accounts,
     },

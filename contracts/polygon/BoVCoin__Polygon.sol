@@ -6,17 +6,17 @@ import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol';
 
 /*
- *    |  \  |  \|  \      |        \|      \       /      \           |  \
- *    | $$  | $$| $$       \$$$$$$$$ \$$$$$$      |  $$$$$$\  ______   \$$ _______
- *    | $$  | $$| $$         | $$     | $$        | $$   \$$ /      \ |  \|       \
- *    | $$  | $$| $$         | $$     | $$        | $$      |  $$$$$$\| $$| $$$$$$$\
- *    | $$  | $$| $$         | $$     | $$        | $$   __ | $$  | $$| $$| $$  | $$
- *    | $$__/ $$| $$_____    | $$    _| $$_       | $$__/  \| $$__/ $$| $$| $$  | $$
- *     \$$    $$| $$     \   | $$   |   $$ \       \$$    $$ \$$    $$| $$| $$  | $$
- *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
+ *    /$$$$$$$            /$$    /$$        /$$$$$$            /$$
+ *   | $$__  $$          | $$   | $$       /$$__  $$          |__/
+ *   | $$  \ $$  /$$$$$$ | $$   | $$      | $$  \__/  /$$$$$$  /$$ /$$$$$$$
+ *   | $$$$$$$  /$$__  $$|  $$ / $$/      | $$       /$$__  $$| $$| $$__  $$
+ *   | $$__  $$| $$  \ $$ \  $$ $$/       | $$      | $$  \ $$| $$| $$  \ $$
+ *   | $$  \ $$| $$  | $$  \  $$$/        | $$    $$| $$  | $$| $$| $$  | $$
+ *   | $$$$$$$/|  $$$$$$/   \  $/         |  $$$$$$/|  $$$$$$/| $$| $$  | $$
+ *   |_______/  \______/     \_/           \______/  \______/ |__/|__/  |__/
  */
 
-contract UltiCoin is AccessControl, ERC20Burnable {
+contract BoVCoin__Polygon is AccessControl, ERC20Burnable {
     struct AccountStatus {
         bool accountLimitExcluded;
         bool transferLimitExcluded;
@@ -27,7 +27,6 @@ contract UltiCoin is AccessControl, ERC20Burnable {
 
     mapping(address => AccountStatus) public statuses;
 
-    uint256 public cap;
     uint256 public accountLimit;
     uint256 public transferLimit;
 
@@ -38,12 +37,10 @@ contract UltiCoin is AccessControl, ERC20Burnable {
 
     constructor(
         address admin,
-        uint256 cap_,
         uint256 accountLimit_,
         uint256 transferLimit_
-    ) ERC20('ULTI Coin', 'ULTI') {
+    ) ERC20('BoV Coin', 'BOV') {
         require(admin != address(0), 'Admin is zero address');
-        require(cap_ > 0, 'Cap is 0');
         require(accountLimit_ > 0, 'Account limit is 0');
         require(transferLimit_ > 0, 'Transfer limit is 0');
 
@@ -56,7 +53,6 @@ contract UltiCoin is AccessControl, ERC20Burnable {
         statuses[address(0)] = AccountStatus(true, true, false);
 
         // Set initial settings
-        cap = cap_;
         accountLimit = accountLimit_;
         transferLimit = transferLimit_;
     }
@@ -72,11 +68,6 @@ contract UltiCoin is AccessControl, ERC20Burnable {
 
     function setTransferLimit(uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         transferLimit = amount;
-    }
-
-    function setCap(uint256 cap_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(cap_ >= totalSupply(), 'Cap is too low');
-        cap = cap_;
     }
 
     function setAccountLimitExclusion(address[] calldata accounts, bool isExcluded)
@@ -120,7 +111,6 @@ contract UltiCoin is AccessControl, ERC20Burnable {
     }
 
     function _mint(address account, uint256 amount) internal override {
-        require(totalSupply() + amount <= cap, 'Cap exceeded');
         super._mint(account, amount);
     }
 

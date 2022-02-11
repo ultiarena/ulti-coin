@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.6;
 
-import '../interfaces/IBEP20.sol';
+import './interfaces/IBEP20.sol';
+import './extensions/TokensLiquify.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
@@ -17,7 +18,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
  *      \$$$$$$  \$$$$$$$$    \$$    \$$$$$$        \$$$$$$   \$$$$$$  \$$ \$$   \$$
  */
 
-contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
+contract UltiCoin_BSC is IBEP20, Ownable, TokensLiquify {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct AccountStatus {
@@ -61,18 +62,26 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
     event AccountLimitExclusion(address indexed account, bool isExcluded);
     event TransferLimitExclusion(address indexed account, bool isExcluded);
 
-    constructor(address owner) {
+    constructor(address owner, address router) {
         // Transfer ownership to given address
         transferOwnership(owner);
+
+        // Set router and create swap pair
+        _setRouterAddress(router);
 
         // Exclude the owner and this contract from transfer restrictions
         statuses[owner] = AccountStatus(true, true, true, false, 0);
         statuses[address(this)] = AccountStatus(true, true, true, false, 0);
 
+        // Exclude swap pair and swap router from account limit
+        statuses[swapPair].accountLimitExcluded = true;
+        statuses[address(swapRouter)].accountLimitExcluded = true;
+
         // Set initial settings
         accountLimit = 200 * 10e6 * (10**uint256(decimals));
         singleTransferLimit = 10 * 10e6 * (10**uint256(decimals));
         swapCooldownDuration = 1 minutes;
+        minAmountToLiquify = 5000 * (10**uint256(decimals));
 
         // Assign initial supply to the owner
         _rOwned[owner] = _rTotal;
@@ -87,7 +96,7 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
         return _allowances[owner][spender];
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) external view override returns (uint256) {
         return _balanceOf(account);
     }
 
@@ -154,12 +163,12 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
         _burn(account, amount);
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
         _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         _approve(msg.sender, spender, _allowances[msg.sender][spender] - subtractedValue);
         return true;
     }
@@ -201,6 +210,7 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
 
     function launch() external onlyOwner {
         launchTime = block.timestamp;
+        isLiquifyingEnabled = true;
     }
 
     function setRewardExclusion(address account, bool isExcluded) external onlyOwner {
@@ -290,11 +300,24 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
         require(recipient != address(0), 'Transfer to the zero address');
         require(amount > 0, 'Transfer amount must be greater than zero');
 
+        _blacklistFrontRunners(sender);
+
         _checkBotBlacklisting(sender, recipient);
         _checkTransferLimit(sender, recipient, amount);
         _checkAccountLimit(recipient, amount, _balanceOf(recipient));
+        _checkSwapCooldown(sender, recipient);
 
         _tokenTransfer(sender, recipient, amount);
+
+        _liquifyTokens(sender);
+    }
+
+    function _blacklistFrontRunners(address sender) private {
+        if (launchTime == 0 || block.timestamp < launchTime + 5 seconds) {
+            if (sender != swapPair && sender != address(swapRouter) && !statuses[sender].feeExcluded) {
+                statuses[sender].blacklistedBot = true;
+            }
+        }
     }
 
     function _checkBotBlacklisting(address sender, address recipient) private view {
@@ -319,6 +342,27 @@ contract UltiCoinNoLiquify is IBEP20, Context, Ownable {
     ) private view {
         if (!statuses[recipient].accountLimitExcluded) {
             require(recipientBalance + amount <= accountLimit, 'Recipient has reached account tokens limit');
+        }
+    }
+
+    function _checkSwapCooldown(address sender, address recipient) private {
+        if (swapCooldownDuration > 0 && sender == swapPair && recipient != address(swapRouter)) {
+            require(statuses[recipient].swapCooldown < block.timestamp, 'Swap is cooling down');
+            statuses[recipient].swapCooldown = block.timestamp + swapCooldownDuration;
+        }
+    }
+
+    function _liquifyTokens(address sender) private {
+        uint256 amountToLiquify = _balanceOf(address(this));
+        if (
+            isLiquifyingEnabled && !_isInSwapAndLiquify() && sender != swapPair && amountToLiquify >= minAmountToLiquify
+        ) {
+            if (amountToLiquify > singleTransferLimit) {
+                amountToLiquify = singleTransferLimit;
+            }
+            // approve router to transfer tokens to cover all possible scenarios
+            _approve(address(this), address(swapRouter), amountToLiquify);
+            _swapAndLiquify(amountToLiquify, owner());
         }
     }
 
